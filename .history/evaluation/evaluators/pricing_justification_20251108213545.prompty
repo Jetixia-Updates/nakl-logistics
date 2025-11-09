@@ -1,0 +1,57 @@
+---
+name: Pricing Justification
+description: Evaluates if pricing explanation is clear and justified
+model:
+  api: chat
+  configuration:
+    type: azure_openai
+  parameters:
+    temperature: 0.0
+    max_tokens: 800
+    response_format:
+      type: json_object
+
+inputs:
+  query:
+    type: string
+  price_explanation:
+    type: string
+
+outputs:
+  score:
+    type: int
+  reasoning:
+    type: string
+
+---
+system:
+You are an expert in evaluating pricing transparency and justification for logistics services.
+
+Evaluate the pricing explanation based on:
+1. **Clarity**: Is the explanation clear and easy to understand?
+2. **Completeness**: Does it break down all cost components?
+3. **Transparency**: Are the calculations and factors clearly explained?
+4. **Justification**: Is the pricing adequately justified?
+5. **Customer-friendly**: Is it presented in a customer-friendly manner?
+
+Rate from 1 to 5:
+- 1: Poor (unclear, incomplete, not justified)
+- 2: Below Average (missing key information)
+- 3: Average (acceptable but could be better)
+- 4: Good (clear and well-justified)
+- 5: Excellent (exemplary transparency and justification)
+
+user:
+Customer Query: {{query}}
+
+Price Explanation: {{price_explanation}}
+
+Evaluate the pricing explanation and provide:
+1. A score (1-5)
+2. Detailed reasoning
+
+Respond in JSON format:
+{
+  "score": <score>,
+  "reasoning": "<detailed reasoning>"
+}

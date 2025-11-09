@@ -1,0 +1,21 @@
+{
+  "welcome": "Welcome to Nakl",
+  "services": "Services",
+  "about": "About Us",
+  "contact": "Contact",
+  "features": "Features",
+  "login": "Login",
+  "register": "Register",
+  "dashboard": "Dashboard",
+  "tenders": "Tenders",
+  "workOrders": "Work Orders",
+  "financial": "Financial",
+  "operations": "Operations",
+  "warehouse": "Warehouse",
+  "vehicles": "Vehicles",
+  "vendors": "Vendors",
+  "customers": "Customers",
+  "reports": "Reports",
+  "settings": "Settings",
+  "logout": "Logout"
+}

@@ -1,0 +1,6 @@
+azure-ai-evaluation>=1.0.0
+azure-identity>=1.15.0
+python-dotenv>=1.0.0
+pandas>=2.0.0
+jsonlines>=4.0.0
+promptflow-core>=1.10.0

@@ -1,0 +1,21 @@
+{
+  "welcome": "مرحباً بك في نقل",
+  "services": "الخدمات",
+  "about": "من نحن",
+  "contact": "اتصل بنا",
+  "features": "المميزات",
+  "login": "تسجيل الدخول",
+  "register": "إنشاء حساب",
+  "dashboard": "لوحة التحكم",
+  "tenders": "المناقصات",
+  "workOrders": "أوامر التشغيل",
+  "financial": "المالية",
+  "operations": "العمليات",
+  "warehouse": "المخازن",
+  "vehicles": "المركبات",
+  "vendors": "الموردين",
+  "customers": "العملاء",
+  "reports": "التقارير",
+  "settings": "الإعدادات",
+  "logout": "تسجيل الخروج"
+}

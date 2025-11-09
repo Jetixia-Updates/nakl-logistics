@@ -1,0 +1,566 @@
+// This is your Prisma schema file for PostgreSQL
+// Database: Accounting, Users, Roles, Financial Data
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  avatar        String?
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLoginAt   DateTime?
+  
+  // Relations
+  roleId        String
+  role          Role      @relation(fields: [roleId], references: [id])
+  departmentId  String?
+  department    Department? @relation(fields: [departmentId], references: [id])
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Audit trails
+  createdJournalEntries JournalEntry[] @relation("CreatedBy")
+  createdInvoices       Invoice[]      @relation("CreatedBy")
+  createdPayments       Payment[]      @relation("CreatedBy")
+  
+  @@index([email])
+  @@index([roleId])
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  nameAr      String
+  description String?
+  permissions Json     // Flexible permissions structure
+  isActive    Boolean  @default(true)
+  
+  users       User[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("roles")
+}
+
+model Department {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  nameAr      String
+  description String?
+  parentId    String?
+  parent      Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children    Department[] @relation("DepartmentHierarchy")
+  isActive    Boolean  @default(true)
+  
+  users       User[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([parentId])
+  @@map("departments")
+}
+
+// ============================================
+// ACCOUNTING - CHART OF ACCOUNTS
+// ============================================
+
+enum AccountType {
+  ASSET           // أصول
+  LIABILITY       // خصوم
+  EQUITY          // حقوق ملكية
+  REVENUE         // إيرادات
+  EXPENSE         // مصروفات
+  COST_OF_SALES   // تكلفة المبيعات
+}
+
+model Account {
+  id              String      @id @default(uuid())
+  code            String      @unique  // Account code (e.g., 1010001)
+  name            String      // English name
+  nameAr          String      // Arabic name
+  type            AccountType
+  parentId        String?
+  parent          Account?    @relation("AccountHierarchy", fields: [parentId], references: [id])
+  children        Account[]   @relation("AccountHierarchy")
+  
+  // Account properties
+  level           Int         // Hierarchy level (1, 2, 3, 4...)
+  isActive        Boolean     @default(true)
+  allowPosting    Boolean     @default(true)  // Can post transactions
+  currency        String      @default("EGP")
+  description     String?
+  
+  // Balance tracking
+  debitBalance    Decimal     @default(0) @db.Decimal(15, 2)
+  creditBalance   Decimal     @default(0) @db.Decimal(15, 2)
+  
+  // Relations
+  journalEntryLines JournalEntryLine[]
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([code])
+  @@index([type])
+  @@index([parentId])
+  @@map("accounts")
+}
+
+// ============================================
+// JOURNAL ENTRIES & TRANSACTIONS
+// ============================================
+
+enum JournalEntryStatus {
+  DRAFT
+  POSTED
+  CANCELLED
+}
+
+model JournalEntry {
+  id              String             @id @default(uuid())
+  entryNumber     String             @unique  // JE-2024-0001
+  date            DateTime
+  description     String
+  descriptionAr   String?
+  status          JournalEntryStatus @default(DRAFT)
+  reference       String?            // Reference to source document
+  notes           String?
+  
+  // Relations
+  lines           JournalEntryLine[]
+  
+  // Audit
+  createdById     String
+  createdBy       User               @relation("CreatedBy", fields: [createdById], references: [id])
+  postedAt        DateTime?
+  
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  
+  @@index([entryNumber])
+  @@index([date])
+  @@index([status])
+  @@map("journal_entries")
+}
+
+model JournalEntryLine {
+  id              String        @id @default(uuid())
+  
+  journalEntryId  String
+  journalEntry    JournalEntry  @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  
+  accountId       String
+  account         Account       @relation(fields: [accountId], references: [id])
+  
+  debit           Decimal       @default(0) @db.Decimal(15, 2)
+  credit          Decimal       @default(0) @db.Decimal(15, 2)
+  description     String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([journalEntryId])
+  @@index([accountId])
+  @@map("journal_entry_lines")
+}
+
+// ============================================
+// CUSTOMERS & VENDORS (SUPPLIERS)
+// ============================================
+
+model Customer {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  name            String
+  nameAr          String
+  type            String    // INDIVIDUAL, COMPANY, GOVERNMENT
+  
+  // Contact Information
+  email           String?
+  phone           String?
+  mobile          String?
+  website         String?
+  
+  // Address
+  address         String?
+  city            String?
+  governorate     String?
+  country         String    @default("Egypt")
+  postalCode      String?
+  
+  // Business Information
+  taxNumber       String?   @unique
+  commercialRegNo String?
+  
+  // Financial
+  creditLimit     Decimal   @default(0) @db.Decimal(15, 2)
+  balance         Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Relations
+  invoices        Invoice[]
+  payments        Payment[]
+  
+  isActive        Boolean   @default(true)
+  notes           String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([code])
+  @@index([taxNumber])
+  @@map("customers")
+}
+
+model Vendor {
+  id              String    @id @default(uuid())
+  code            String    @unique
+  name            String
+  nameAr          String
+  type            String    // VEHICLE_OWNER, SUPPLIER, SERVICE_PROVIDER
+  
+  // Contact Information
+  email           String?
+  phone           String?
+  mobile          String?
+  contactPerson   String?
+  
+  // Address
+  address         String?
+  city            String?
+  governorate     String?
+  country         String    @default("Egypt")
+  
+  // Business Information
+  taxNumber       String?   @unique
+  commercialRegNo String?
+  
+  // Vehicle Owner Specific (if type = VEHICLE_OWNER)
+  licenseNumber   String?
+  licenseExpiry   DateTime?
+  
+  // Financial
+  balance         Decimal   @default(0) @db.Decimal(15, 2)
+  
+  // Relations
+  vehicles        Vehicle[]
+  bills           Bill[]
+  payments        Payment[]
+  
+  isActive        Boolean   @default(true)
+  notes           String?
+  rating          Decimal?  @db.Decimal(3, 2)  // 0.00 to 5.00
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([code])
+  @@index([type])
+  @@index([taxNumber])
+  @@map("vendors")
+}
+
+// ============================================
+// VEHICLES (EXTERNAL FLEET)
+// ============================================
+
+enum VehicleType {
+  TRUCK
+  TRAILER
+  REFRIGERATED
+  CONTAINER
+  TANKER
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  ASSIGNED
+  MAINTENANCE
+  INACTIVE
+}
+
+model Vehicle {
+  id              String        @id @default(uuid())
+  plateNumber     String        @unique
+  type            VehicleType
+  brand           String?
+  model           String?
+  year            Int?
+  capacity        Decimal?      @db.Decimal(10, 2)  // in tons
+  status          VehicleStatus @default(AVAILABLE)
+  
+  // Owner Information
+  vendorId        String
+  vendor          Vendor        @relation(fields: [vendorId], references: [id])
+  
+  // Documentation
+  licenseExpiry   DateTime?
+  insuranceExpiry DateTime?
+  lastMaintenance DateTime?
+  
+  // GPS Device
+  gpsDeviceId     String?       @unique
+  gpsActive       Boolean       @default(false)
+  
+  isActive        Boolean       @default(true)
+  notes           String?
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([plateNumber])
+  @@index([vendorId])
+  @@index([status])
+  @@map("vehicles")
+}
+
+// ============================================
+// INVOICES & BILLING
+// ============================================
+
+enum InvoiceType {
+  SALES_INVOICE
+  PURCHASE_INVOICE
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  type            InvoiceType
+  status          InvoiceStatus @default(DRAFT)
+  date            DateTime
+  dueDate         DateTime?
+  
+  // Customer
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  
+  // Amounts
+  subtotal        Decimal       @db.Decimal(15, 2)
+  taxAmount       Decimal       @default(0) @db.Decimal(15, 2)
+  discountAmount  Decimal       @default(0) @db.Decimal(15, 2)
+  total           Decimal       @db.Decimal(15, 2)
+  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
+  remainingAmount Decimal       @db.Decimal(15, 2)
+  
+  // Details
+  items           InvoiceItem[]
+  payments        Payment[]
+  
+  // Reference
+  referenceType   String?       // TENDER, WORK_ORDER, CONTRACT
+  referenceId     String?
+  
+  notes           String?
+  terms           String?
+  
+  // Audit
+  createdById     String
+  createdBy       User          @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([invoiceNumber])
+  @@index([customerId])
+  @@index([status])
+  @@index([date])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String   @id @default(uuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  description     String
+  descriptionAr   String?
+  quantity        Decimal  @db.Decimal(10, 2)
+  unitPrice       Decimal  @db.Decimal(15, 2)
+  taxRate         Decimal  @default(0) @db.Decimal(5, 2)  // Tax percentage
+  discountRate    Decimal  @default(0) @db.Decimal(5, 2)
+  total           Decimal  @db.Decimal(15, 2)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ============================================
+// BILLS (VENDOR INVOICES)
+// ============================================
+
+enum BillStatus {
+  DRAFT
+  APPROVED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+model Bill {
+  id              String     @id @default(uuid())
+  billNumber      String     @unique
+  status          BillStatus @default(DRAFT)
+  date            DateTime
+  dueDate         DateTime?
+  
+  // Vendor
+  vendorId        String
+  vendor          Vendor     @relation(fields: [vendorId], references: [id])
+  
+  // Amounts
+  subtotal        Decimal    @db.Decimal(15, 2)
+  taxAmount       Decimal    @default(0) @db.Decimal(15, 2)
+  total           Decimal    @db.Decimal(15, 2)
+  paidAmount      Decimal    @default(0) @db.Decimal(15, 2)
+  remainingAmount Decimal    @db.Decimal(15, 2)
+  
+  // Details
+  items           BillItem[]
+  payments        Payment[]
+  
+  // Reference
+  referenceType   String?    // WORK_ORDER, PURCHASE_ORDER
+  referenceId     String?
+  
+  notes           String?
+  
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  
+  @@index([billNumber])
+  @@index([vendorId])
+  @@index([status])
+  @@map("bills")
+}
+
+model BillItem {
+  id              String   @id @default(uuid())
+  billId          String
+  bill            Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  
+  description     String
+  descriptionAr   String?
+  quantity        Decimal  @db.Decimal(10, 2)
+  unitPrice       Decimal  @db.Decimal(15, 2)
+  taxRate         Decimal  @default(0) @db.Decimal(5, 2)
+  total           Decimal  @db.Decimal(15, 2)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([billId])
+  @@map("bill_items")
+}
+
+// ============================================
+// PAYMENTS
+// ============================================
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHECK
+  CREDIT_CARD
+  MOBILE_WALLET
+}
+
+enum PaymentType {
+  RECEIVED  // From customer
+  SENT      // To vendor
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  paymentNumber   String        @unique
+  type            PaymentType
+  method          PaymentMethod
+  date            DateTime
+  amount          Decimal       @db.Decimal(15, 2)
+  
+  // Customer Payment
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  invoiceId       String?
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+  
+  // Vendor Payment
+  vendorId        String?
+  vendor          Vendor?       @relation(fields: [vendorId], references: [id])
+  billId          String?
+  bill            Bill?         @relation(fields: [billId], references: [id])
+  
+  // Bank Details
+  bankName        String?
+  accountNumber   String?
+  checkNumber     String?
+  transactionRef  String?
+  
+  notes           String?
+  
+  // Audit
+  createdById     String
+  createdBy       User          @relation("CreatedBy", fields: [createdById], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([paymentNumber])
+  @@index([customerId])
+  @@index([vendorId])
+  @@index([date])
+  @@map("payments")
+}
+
+// ============================================
+// COST CENTERS
+// ============================================
+
+model CostCenter {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  nameAr      String
+  description String?
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("cost_centers")
+}
