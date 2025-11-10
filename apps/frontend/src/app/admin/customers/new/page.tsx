@@ -535,7 +535,7 @@ export default function NewCustomerPage() {
                         {language === 'ar' ? 'الخدمات المختارة' : 'Selected Services'}
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {customerData.services.map((service, index) => (
+                        {customerData.services.map((service: string, index: number) => (
                           <span
                             key={index}
                             className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"

@@ -151,7 +151,7 @@ export class TenderController {
   // Create new tender
   async createTender(req: Request, res: Response) {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       const data = req.body;
 
       // Generate tender number
@@ -484,7 +484,7 @@ export class TenderController {
   async evaluateTender(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       const { evaluationType, criteria, weights, report, reportAr, recommendation } = req.body;
 
       const evaluation = await prisma.tenderEvaluation.create({

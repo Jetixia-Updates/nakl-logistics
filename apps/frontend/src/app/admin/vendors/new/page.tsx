@@ -621,7 +621,7 @@ export default function NewVendorPage() {
                         {language === 'ar' ? 'الخدمات المختارة' : 'Selected Services'}
                       </label>
                       <div className="flex flex-wrap gap-2">
-                        {vendorData.services.map((service, index) => (
+                        {vendorData.services.map((service: string, index: number) => (
                           <span
                             key={index}
                             className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm"

@@ -311,7 +311,7 @@ export default function CustomersPage() {
                       {language === 'ar' ? 'الخدمات:' : 'Services:'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {customer.services.map((service, index) => (
+                      {customer.services.map((service: string, index: number) => (
                         <span
                           key={index}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
@@ -434,7 +434,7 @@ export default function CustomersPage() {
                       {language === 'ar' ? 'الخدمات:' : 'Services:'}
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {vendor.services.map((service, index) => (
+                      {vendor.services.map((service: string, index: number) => (
                         <span
                           key={index}
                           className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800"

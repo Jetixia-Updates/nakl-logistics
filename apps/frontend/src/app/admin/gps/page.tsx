@@ -205,7 +205,7 @@ export default function GPSTrackingPage() {
                 </h3>
               </div>
               <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
-                {Object.values(vehicleData).map((vehicle) => (
+                {Object.values(vehicleData).map((vehicle: any) => (
                   <div
                     key={vehicle.id}
                     onClick={() => setSelectedVehicle(vehicle.id)}
@@ -454,7 +454,7 @@ export default function GPSTrackingPage() {
                         {language === 'ar' ? 'التنبيهات' : 'Alerts'}
                       </h4>
                       <div className="space-y-2">
-                        {selectedVehicleData.alerts.map((alert, index) => (
+                        {selectedVehicleData.alerts.map((alert: any, index: number) => (
                           <div
                             key={index}
                             className={`p-3 rounded-lg border ${getAlertColor(alert.type)}`}

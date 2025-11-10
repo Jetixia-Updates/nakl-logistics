@@ -51,3 +51,6 @@ yarn-error.log*
 # Logs
 logs
 *.log
+
+# Local Netlify folder
+.netlify
