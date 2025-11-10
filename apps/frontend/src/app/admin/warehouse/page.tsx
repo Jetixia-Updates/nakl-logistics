@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Package,
@@ -19,6 +19,7 @@ import {
   Calendar,
   User,
   Truck,
+  X,
 } from 'lucide-react';
 
 export default function WarehousePage() {
@@ -26,6 +27,30 @@ export default function WarehousePage() {
   const [activeTab, setActiveTab] = useState('inventory');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  
+  // Modal States
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [showAddWarehouseModal, setShowAddWarehouseModal] = useState(false);
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showIssueModal, setShowIssueModal] = useState(false);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [selectedWarehouse, setSelectedWarehouse] = useState<any>(null);
+  
+  // Form States
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [warehouses, setWarehouses] = useState<any[]>([]);
+  const [movements, setMovements] = useState<any[]>([]);
+  
+  // Load data from localStorage
+  useEffect(() => {
+    const savedInventory = JSON.parse(localStorage.getItem('inventory') || '[]');
+    const savedWarehouses = JSON.parse(localStorage.getItem('warehouses') || '[]');
+    const savedMovements = JSON.parse(localStorage.getItem('warehouseMovements') || '[]');
+    
+    setInventory(savedInventory);
+    setWarehouses(savedWarehouses);
+    setMovements(savedMovements);
+  }, []);
 
   // Sample warehouse data
   const warehouseData = {
@@ -222,13 +247,22 @@ export default function WarehousePage() {
     return typeMap[type as keyof typeof typeMap] || type;
   };
 
-  const filteredInventory = warehouseData.inventory.filter((item) => {
+  const filteredInventory = inventory.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.sku.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
+  
+  // Calculate overview stats
+  const warehouseOverview = {
+    totalItems: inventory.reduce((sum, item) => sum + item.quantity, 0),
+    totalValue: inventory.reduce((sum, item) => sum + item.value, 0),
+    lowStock: inventory.filter(item => item.quantity > 0 && item.quantity <= item.minStock).length,
+    outOfStock: inventory.filter(item => item.quantity === 0).length,
+    warehouses: warehouses.length,
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-EG', {
@@ -260,7 +294,7 @@ export default function WarehousePage() {
               <Package className="w-8 h-8 text-blue-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
                 <p className="text-2xl font-bold text-gray-900">
-                  {warehouseData.overview.totalItems}
+                  {warehouseOverview.totalItems}
                 </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'إجمالي الأصناف' : 'Total Items'}
@@ -274,7 +308,7 @@ export default function WarehousePage() {
               <TrendingUp className="w-8 h-8 text-green-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(warehouseData.overview.totalValue)}
+                  {formatCurrency(warehouseOverview.totalValue)}
                 </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'قيمة المخزون' : 'Stock Value'}
@@ -288,7 +322,7 @@ export default function WarehousePage() {
               <AlertTriangle className="w-8 h-8 text-yellow-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
                 <p className="text-2xl font-bold text-gray-900">
-                  {warehouseData.overview.lowStock}
+                  {warehouseOverview.lowStock}
                 </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'مخزون منخفض' : 'Low Stock'}
@@ -302,7 +336,7 @@ export default function WarehousePage() {
               <PackageX className="w-8 h-8 text-red-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
                 <p className="text-2xl font-bold text-gray-900">
-                  {warehouseData.overview.outOfStock}
+                  {warehouseOverview.outOfStock}
                 </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'نفد المخزون' : 'Out of Stock'}
@@ -316,7 +350,7 @@ export default function WarehousePage() {
               <Warehouse className="w-8 h-8 text-purple-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
                 <p className="text-2xl font-bold text-gray-900">
-                  {warehouseData.overview.warehouses}
+                  {warehouseOverview.warehouses}
                 </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'المستودعات' : 'Warehouses'}
@@ -419,7 +453,10 @@ export default function WarehousePage() {
                     </select>
                   </div>
                 </div>
-                <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <button 
+                  onClick={() => setShowAddItemModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
                   <Plus className="w-4 h-4" />
                   {language === 'ar' ? 'إضافة صنف' : 'Add Item'}
                 </button>
@@ -515,10 +552,39 @@ export default function WarehousePage() {
         {/* Stock Movements Tab */}
         {activeTab === 'movements' && (
           <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {language === 'ar' ? 'حركات المخزون' : 'Stock Movements'}
+              </h2>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setShowReceiveModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  {language === 'ar' ? 'أمر استلام' : 'Receive Order'}
+                </button>
+                <button 
+                  onClick={() => setShowIssueModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <TrendingDown className="w-4 h-4" />
+                  {language === 'ar' ? 'إذن صرف' : 'Issue Voucher'}
+                </button>
+                <button 
+                  onClick={() => setShowTransferModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  {language === 'ar' ? 'نقل' : 'Transfer'}
+                </button>
+              </div>
+            </div>
+            
             <div className="bg-white rounded-lg shadow-sm border">
               <div className="p-6 border-b">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  {language === 'ar' ? 'حركات المخزون' : 'Stock Movements'}
+                  {language === 'ar' ? 'سجل الحركات' : 'Movement History'}
                 </h3>
               </div>
               <div className="overflow-x-auto">
@@ -558,7 +624,7 @@ export default function WarehousePage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {warehouseData.movements.map((movement) => (
+                    {movements.map((movement) => (
                       <tr key={movement.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span
@@ -603,8 +669,22 @@ export default function WarehousePage() {
 
         {/* Warehouses Tab */}
         {activeTab === 'warehouses' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {warehouseData.warehouses.map((warehouse) => (
+          <div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {language === 'ar' ? 'المستودعات' : 'Warehouses'}
+              </h2>
+              <button 
+                onClick={() => setShowAddWarehouseModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                {language === 'ar' ? 'إضافة مستودع' : 'Add Warehouse'}
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+            {warehouses.map((warehouse) => (
               <div
                 key={warehouse.id}
                 className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
@@ -674,12 +754,32 @@ export default function WarehousePage() {
                     </div>
                   </div>
 
-                  <button className="w-full px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
-                    {language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button 
+                      onClick={() => {
+                        setSelectedWarehouse(warehouse);
+                        setShowReceiveModal(true);
+                      }}
+                      className="px-3 py-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    >
+                      <TrendingUp className="w-4 h-4" />
+                      {language === 'ar' ? 'استلام' : 'Receive'}
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSelectedWarehouse(warehouse);
+                        setShowIssueModal(true);
+                      }}
+                      className="px-3 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                    >
+                      <TrendingDown className="w-4 h-4" />
+                      {language === 'ar' ? 'صرف' : 'Issue'}
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
           </div>
         )}
 
@@ -739,6 +839,572 @@ export default function WarehousePage() {
           </div>
         )}
       </div>
+
+      {/* Add Item Modal */}
+      {showAddItemModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'إضافة صنف جديد' : 'Add New Item'}
+              </h3>
+              <button onClick={() => setShowAddItemModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const newItem = {
+                id: inventory.length + 1,
+                name: formData.get('name') as string,
+                category: formData.get('category') as string,
+                sku: formData.get('sku') as string,
+                quantity: Number(formData.get('quantity')),
+                minStock: Number(formData.get('minStock')),
+                maxStock: Number(formData.get('maxStock')),
+                unit: formData.get('unit') as string,
+                location: formData.get('location') as string,
+                value: Number(formData.get('value')),
+                supplier: formData.get('supplier') as string,
+                status: Number(formData.get('quantity')) === 0 ? 'out-of-stock' : Number(formData.get('quantity')) < Number(formData.get('minStock')) ? 'low-stock' : 'in-stock'
+              };
+              const updatedInventory = [...inventory, newItem];
+              setInventory(updatedInventory);
+              localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+              setShowAddItemModal(false);
+            }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'اسم الصنف' : 'Item Name'} *
+                  </label>
+                  <input type="text" name="name" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الفئة' : 'Category'} *
+                  </label>
+                  <select name="category" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="Spare Parts">{language === 'ar' ? 'قطع غيار' : 'Spare Parts'}</option>
+                    <option value="Fuel">{language === 'ar' ? 'وقود' : 'Fuel'}</option>
+                    <option value="Tires">{language === 'ar' ? 'إطارات' : 'Tires'}</option>
+                    <option value="Tools">{language === 'ar' ? 'أدوات' : 'Tools'}</option>
+                    <option value="Lubricants">{language === 'ar' ? 'زيوت' : 'Lubricants'}</option>
+                    <option value="Other">{language === 'ar' ? 'أخرى' : 'Other'}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'رقم الصنف (SKU)' : 'SKU'} *
+                  </label>
+                  <input type="text" name="sku" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية' : 'Quantity'} *
+                  </label>
+                  <input type="number" name="quantity" required min="0" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الحد الأدنى' : 'Min Stock'} *
+                  </label>
+                  <input type="number" name="minStock" required min="0" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الحد الأقصى' : 'Max Stock'} *
+                  </label>
+                  <input type="number" name="maxStock" required min="0" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الوحدة' : 'Unit'} *
+                  </label>
+                  <input type="text" name="unit" required placeholder="pcs, kg, liters..." className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الموقع' : 'Location'} *
+                  </label>
+                  <input type="text" name="location" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'القيمة (جنيه)' : 'Value (EGP)'} *
+                  </label>
+                  <input type="number" name="value" required min="0" step="0.01" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'المورد' : 'Supplier'} *
+                  </label>
+                  <input type="text" name="supplier" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowAddItemModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  {language === 'ar' ? 'إضافة' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Warehouse Modal */}
+      {showAddWarehouseModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'إضافة مستودع جديد' : 'Add New Warehouse'}
+              </h3>
+              <button onClick={() => setShowAddWarehouseModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const newWarehouse = {
+                id: `WH-${String(warehouses.length + 1).padStart(3, '0')}`,
+                name: formData.get('name') as string,
+                location: formData.get('location') as string,
+                capacity: Number(formData.get('capacity')),
+                occupied: 0,
+                manager: formData.get('manager') as string,
+                phone: formData.get('phone') as string,
+                categories: (formData.get('categories') as string).split(',').map(c => c.trim())
+              };
+              const updatedWarehouses = [...warehouses, newWarehouse];
+              setWarehouses(updatedWarehouses);
+              localStorage.setItem('warehouses', JSON.stringify(updatedWarehouses));
+              setShowAddWarehouseModal(false);
+            }}>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'اسم المستودع' : 'Warehouse Name'} *
+                  </label>
+                  <input type="text" name="name" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الموقع' : 'Location'} *
+                  </label>
+                  <input type="text" name="location" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'السعة (م³)' : 'Capacity (m³)'} *
+                  </label>
+                  <input type="number" name="capacity" required min="1" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'المدير' : 'Manager'} *
+                  </label>
+                  <input type="text" name="manager" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الهاتف' : 'Phone'} *
+                  </label>
+                  <input type="tel" name="phone" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الفئات (مفصولة بفاصلة)' : 'Categories (comma-separated)'} *
+                  </label>
+                  <input type="text" name="categories" required placeholder="Spare Parts, Fuel, Tires" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowAddWarehouseModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  {language === 'ar' ? 'إضافة' : 'Add'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Receive Order Modal */}
+      {showReceiveModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'أمر استلام' : 'Receive Order'}
+              </h3>
+              <button onClick={() => { setShowReceiveModal(false); setSelectedWarehouse(null); }} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const itemId = Number(formData.get('item'));
+              const quantity = Number(formData.get('quantity'));
+              const warehouseId = selectedWarehouse?.id || formData.get('warehouse') as string;
+              
+              // Update inventory
+              const updatedInventory = inventory.map(item => {
+                if (item.id === itemId) {
+                  const newQuantity = item.quantity + quantity;
+                  return {
+                    ...item,
+                    quantity: newQuantity,
+                    status: newQuantity === 0 ? 'out-of-stock' : newQuantity < item.minStock ? 'low-stock' : 'in-stock'
+                  };
+                }
+                return item;
+              });
+              setInventory(updatedInventory);
+              localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+              
+              // Create movement record
+              const item = inventory.find(i => i.id === itemId);
+              const warehouse = warehouses.find(w => w.id === warehouseId);
+              const newMovement = {
+                id: movements.length + 1,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: 'inbound' as const,
+                item: item?.name || '',
+                quantity: quantity,
+                unit: item?.unit || 'pcs',
+                from: formData.get('source') as string,
+                to: warehouse?.name || '',
+                reference: formData.get('reference') as string,
+                operator: 'Current User',
+                notes: formData.get('notes') as string
+              };
+              const updatedMovements = [...movements, newMovement];
+              setMovements(updatedMovements);
+              localStorage.setItem('warehouseMovements', JSON.stringify(updatedMovements));
+              
+              setShowReceiveModal(false);
+              setSelectedWarehouse(null);
+            }}>
+              <div className="space-y-4">
+                {!selectedWarehouse && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {language === 'ar' ? 'المستودع' : 'Warehouse'} *
+                    </label>
+                    <select name="warehouse" required className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">{language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'}</option>
+                      {warehouses.map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الصنف' : 'Item'} *
+                  </label>
+                  <select name="item" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر الصنف' : 'Select Item'}</option>
+                    {inventory.map(item => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.sku})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية' : 'Quantity'} *
+                  </label>
+                  <input type="number" name="quantity" required min="1" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'المصدر/المورد' : 'Source/Supplier'} *
+                  </label>
+                  <input type="text" name="source" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'رقم المرجع' : 'Reference Number'} *
+                  </label>
+                  <input type="text" name="reference" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'ملاحظات' : 'Notes'}
+                  </label>
+                  <textarea name="notes" rows={3} className="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => { setShowReceiveModal(false); setSelectedWarehouse(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  {language === 'ar' ? 'استلام' : 'Receive'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Issue Voucher Modal */}
+      {showIssueModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'إذن صرف' : 'Issue Voucher'}
+              </h3>
+              <button onClick={() => { setShowIssueModal(false); setSelectedWarehouse(null); }} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const itemId = Number(formData.get('item'));
+              const quantity = Number(formData.get('quantity'));
+              const warehouseId = selectedWarehouse?.id || formData.get('warehouse') as string;
+              
+              // Check if sufficient stock
+              const item = inventory.find(i => i.id === itemId);
+              if (item && item.quantity < quantity) {
+                alert(language === 'ar' ? 'كمية غير كافية في المخزون' : 'Insufficient stock');
+                return;
+              }
+              
+              // Update inventory
+              const updatedInventory = inventory.map(i => {
+                if (i.id === itemId) {
+                  const newQuantity = i.quantity - quantity;
+                  return {
+                    ...i,
+                    quantity: newQuantity,
+                    status: newQuantity === 0 ? 'out-of-stock' : newQuantity < i.minStock ? 'low-stock' : 'in-stock'
+                  };
+                }
+                return i;
+              });
+              setInventory(updatedInventory);
+              localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+              
+              // Create movement record
+              const warehouse = warehouses.find(w => w.id === warehouseId);
+              const newMovement = {
+                id: movements.length + 1,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: 'outbound' as const,
+                item: item?.name || '',
+                quantity: quantity,
+                unit: item?.unit || 'pcs',
+                from: warehouse?.name || '',
+                to: formData.get('destination') as string,
+                reference: formData.get('reference') as string,
+                operator: 'Current User',
+                notes: formData.get('notes') as string
+              };
+              const updatedMovements = [...movements, newMovement];
+              setMovements(updatedMovements);
+              localStorage.setItem('warehouseMovements', JSON.stringify(updatedMovements));
+              
+              setShowIssueModal(false);
+              setSelectedWarehouse(null);
+            }}>
+              <div className="space-y-4">
+                {!selectedWarehouse && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {language === 'ar' ? 'المستودع' : 'Warehouse'} *
+                    </label>
+                    <select name="warehouse" required className="w-full px-3 py-2 border rounded-lg">
+                      <option value="">{language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'}</option>
+                      {warehouses.map(w => (
+                        <option key={w.id} value={w.id}>{w.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الصنف' : 'Item'} *
+                  </label>
+                  <select name="item" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر الصنف' : 'Select Item'}</option>
+                    {inventory.filter(item => item.quantity > 0).map(item => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.sku}) - {language === 'ar' ? 'متوفر' : 'Available'}: {item.quantity}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية' : 'Quantity'} *
+                  </label>
+                  <input type="number" name="quantity" required min="1" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الوجهة/العميل' : 'Destination/Customer'} *
+                  </label>
+                  <input type="text" name="destination" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'رقم المرجع' : 'Reference Number'} *
+                  </label>
+                  <input type="text" name="reference" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'ملاحظات' : 'Notes'}
+                  </label>
+                  <textarea name="notes" rows={3} className="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => { setShowIssueModal(false); setSelectedWarehouse(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
+                  {language === 'ar' ? 'صرف' : 'Issue'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'نقل بين المستودعات' : 'Transfer Between Warehouses'}
+              </h3>
+              <button onClick={() => setShowTransferModal(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const itemId = Number(formData.get('item'));
+              const quantity = Number(formData.get('quantity'));
+              const fromWarehouseId = formData.get('fromWarehouse') as string;
+              const toWarehouseId = formData.get('toWarehouse') as string;
+              
+              if (fromWarehouseId === toWarehouseId) {
+                alert(language === 'ar' ? 'لا يمكن النقل إلى نفس المستودع' : 'Cannot transfer to the same warehouse');
+                return;
+              }
+              
+              // Check if sufficient stock
+              const item = inventory.find(i => i.id === itemId);
+              if (item && item.quantity < quantity) {
+                alert(language === 'ar' ? 'كمية غير كافية في المخزون' : 'Insufficient stock');
+                return;
+              }
+              
+              // Create movement record
+              const fromWarehouse = warehouses.find(w => w.id === fromWarehouseId);
+              const toWarehouse = warehouses.find(w => w.id === toWarehouseId);
+              const newMovement = {
+                id: movements.length + 1,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: 'transfer' as const,
+                item: item?.name || '',
+                quantity: quantity,
+                unit: item?.unit || 'pcs',
+                from: fromWarehouse?.name || '',
+                to: toWarehouse?.name || '',
+                reference: formData.get('reference') as string,
+                operator: 'Current User',
+                notes: formData.get('notes') as string
+              };
+              const updatedMovements = [...movements, newMovement];
+              setMovements(updatedMovements);
+              localStorage.setItem('warehouseMovements', JSON.stringify(updatedMovements));
+              
+              setShowTransferModal(false);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'من المستودع' : 'From Warehouse'} *
+                  </label>
+                  <select name="fromWarehouse" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'}</option>
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'إلى المستودع' : 'To Warehouse'} *
+                  </label>
+                  <select name="toWarehouse" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر المستودع' : 'Select Warehouse'}</option>
+                    {warehouses.map(w => (
+                      <option key={w.id} value={w.id}>{w.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الصنف' : 'Item'} *
+                  </label>
+                  <select name="item" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر الصنف' : 'Select Item'}</option>
+                    {inventory.filter(item => item.quantity > 0).map(item => (
+                      <option key={item.id} value={item.id}>{item.name} ({item.sku}) - {language === 'ar' ? 'متوفر' : 'Available'}: {item.quantity}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية' : 'Quantity'} *
+                  </label>
+                  <input type="number" name="quantity" required min="1" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'رقم المرجع' : 'Reference Number'} *
+                  </label>
+                  <input type="text" name="reference" required className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'ملاحظات' : 'Notes'}
+                  </label>
+                  <textarea name="notes" rows={3} className="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => setShowTransferModal(false)} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                  {language === 'ar' ? 'نقل' : 'Transfer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

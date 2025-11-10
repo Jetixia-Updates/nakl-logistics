@@ -28,98 +28,30 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [dateRange, setDateRange] = useState('30days');
 
-  // Sample data for reports
   const overviewStats = {
-    totalRevenue: 2750000,
-    revenueGrowth: 15.2,
-    totalOrders: 156,
-    ordersGrowth: 8.5,
-    activeVehicles: 28,
-    vehiclesGrowth: 12.1,
-    customerSatisfaction: 4.7,
-    satisfactionGrowth: 3.2,
+    totalRevenue: 0,
+    revenueGrowth: 0,
+    totalOrders: 0,
+    ordersGrowth: 0,
+    activeVehicles: 0,
+    vehiclesGrowth: 0,
+    customerSatisfaction: 0,
+    satisfactionGrowth: 0,
   };
 
-  const monthlyRevenue = [
-    { month: language === 'ar' ? 'يناير' : 'Jan', revenue: 850000, orders: 45 },
-    { month: language === 'ar' ? 'فبراير' : 'Feb', revenue: 920000, orders: 52 },
-    { month: language === 'ar' ? 'مارس' : 'Mar', revenue: 780000, orders: 38 },
-    { month: language === 'ar' ? 'أبريل' : 'Apr', revenue: 1100000, orders: 61 },
-    { month: language === 'ar' ? 'مايو' : 'May', revenue: 950000, orders: 48 },
-    { month: language === 'ar' ? 'يونيو' : 'Jun', revenue: 1200000, orders: 67 },
-  ];
-
-  const topCustomers = [
-    {
-      name: language === 'ar' ? 'شركة النصر للتجارة' : 'Al-Nasr Trading',
-      revenue: 650000,
-      orders: 28,
-      growth: 23.5,
-    },
-    {
-      name: language === 'ar' ? 'المجموعة المتحدة' : 'United Group',
-      revenue: 480000,
-      orders: 22,
-      growth: 15.8,
-    },
-    {
-      name: language === 'ar' ? 'مؤسسة الشرق الأوسط' : 'Middle East Corp',
-      revenue: 320000,
-      orders: 18,
-      growth: -5.2,
-    },
-    {
-      name: language === 'ar' ? 'شركة التطوير الحديث' : 'Modern Development',
-      revenue: 290000,
-      orders: 15,
-      growth: 8.7,
-    },
-  ];
-
-  const vehiclePerformance = [
-    {
-      id: 'VEH-001',
-      driver: language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohamed',
-      trips: 45,
-      revenue: 285000,
-      rating: 4.8,
-      fuel: 2500,
-    },
-    {
-      id: 'VEH-002',
-      driver: language === 'ar' ? 'محمد علي' : 'Mohamed Ali',
-      trips: 38,
-      revenue: 245000,
-      rating: 4.6,
-      fuel: 2200,
-    },
-    {
-      id: 'VEH-003',
-      driver: language === 'ar' ? 'خالد أحمد' : 'Khaled Ahmed',
-      trips: 42,
-      revenue: 268000,
-      rating: 4.7,
-      fuel: 2350,
-    },
-    {
-      id: 'VEH-004',
-      driver: language === 'ar' ? 'سارة حسن' : 'Sara Hassan',
-      trips: 35,
-      revenue: 225000,
-      rating: 4.9,
-      fuel: 2100,
-    },
-  ];
+  const monthlyRevenue: any[] = [];
+  const topCustomers: any[] = [];
+  const vehiclePerformance: any[] = [];
 
   const financialSummary = {
-    totalIncome: 2750000,
-    totalExpenses: 1890000,
-    netProfit: 860000,
-    profitMargin: 31.3,
-    pendingInvoices: 450000,
-    overdueInvoices: 125000,
-    averagePaymentTime: 18,
-    cashFlow: 235000,
+    totalIncome: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    profitMargin: 0,
+    pendingInvoices: 0,
+    overdueInvoices: 0,
+    averagePaymentTime: 0,
+    cashFlow: 0,
   };
 
   const formatCurrency = (amount: number) => {

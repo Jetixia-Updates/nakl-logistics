@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Users,
@@ -23,127 +24,15 @@ import {
 } from 'lucide-react';
 
 export default function CustomersPage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState('customers');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [filter, setFilter] = useState('all');
 
-  // Sample data
-  const customers = [
-    {
-      id: 'CUS-001',
-      name: language === 'ar' ? 'شركة النصر للتجارة' : 'Al-Nasr Trading Company',
-      type: 'company',
-      contactPerson: language === 'ar' ? 'أحمد محمد علي' : 'Ahmed Mohamed Ali',
-      phone: '+201234567890',
-      email: 'info@alnasr-trading.com',
-      address:
-        language === 'ar'
-          ? 'القاهرة - مدينة نصر - شارع الطيران'
-          : 'Cairo - Nasr City - Aviation Street',
-      status: 'active',
-      rating: 4.8,
-      totalOrders: 45,
-      totalValue: 1250000,
-      lastOrder: '2024-11-05',
-      creditLimit: 500000,
-      outstandingBalance: 125000,
-      paymentTerms: '30 days',
-      services: [
-        language === 'ar' ? 'نقل بري' : 'Land Transport',
-        language === 'ar' ? 'تخليص جمركي' : 'Customs Clearance',
-      ],
-    },
-    {
-      id: 'CUS-002',
-      name: language === 'ar' ? 'المجموعة المتحدة للاستيراد' : 'United Import Group',
-      type: 'company',
-      contactPerson: language === 'ar' ? 'فاطمة أحمد حسن' : 'Fatma Ahmed Hassan',
-      phone: '+201987654321',
-      email: 'contact@united-import.com',
-      address:
-        language === 'ar'
-          ? 'الإسكندرية - الدخيلة - المنطقة الصناعية'
-          : 'Alexandria - Dekheila - Industrial Zone',
-      status: 'active',
-      rating: 4.6,
-      totalOrders: 32,
-      totalValue: 850000,
-      lastOrder: '2024-11-08',
-      creditLimit: 300000,
-      outstandingBalance: 75000,
-      paymentTerms: '15 days',
-      services: [
-        language === 'ar' ? 'نقل بحري' : 'Sea Transport',
-        language === 'ar' ? 'تخزين' : 'Storage',
-      ],
-    },
-    {
-      id: 'CUS-003',
-      name: language === 'ar' ? 'مؤسسة الشرق الأوسط' : 'Middle East Corporation',
-      type: 'company',
-      contactPerson: language === 'ar' ? 'خالد محمود سليم' : 'Khaled Mahmoud Salim',
-      phone: '+201555444333',
-      email: 'info@middle-east-corp.com',
-      address:
-        language === 'ar'
-          ? 'الجيزة - الشيخ زايد - المنطقة التجارية'
-          : 'Giza - Sheikh Zayed - Commercial District',
-      status: 'pending',
-      rating: 4.2,
-      totalOrders: 18,
-      totalValue: 420000,
-      lastOrder: '2024-10-28',
-      creditLimit: 200000,
-      outstandingBalance: 45000,
-      paymentTerms: '7 days',
-      services: [language === 'ar' ? 'نقل خاص' : 'Special Transport'],
-    },
-  ];
-
-  const vendors = [
-    {
-      id: 'VEN-001',
-      name: language === 'ar' ? 'شركة النقل المتطور' : 'Advanced Transport Company',
-      type: 'transport',
-      contactPerson: language === 'ar' ? 'محمد علي حسن' : 'Mohamed Ali Hassan',
-      phone: '+201234567890',
-      email: 'info@advanced-transport.com',
-      address: language === 'ar' ? 'القاهرة - التجمع الخامس' : 'Cairo - New Cairo',
-      status: 'active',
-      rating: 4.9,
-      vehicleCount: 15,
-      totalContracts: 28,
-      contractValue: 2100000,
-      lastPayment: '2024-11-07',
-      services: [
-        language === 'ar' ? 'نقل ثقيل' : 'Heavy Transport',
-        language === 'ar' ? 'نقل متخصص' : 'Specialized Transport',
-      ],
-      performance: 95,
-    },
-    {
-      id: 'VEN-002',
-      name: language === 'ar' ? 'مؤسسة الشحن السريع' : 'Fast Shipping Corporation',
-      type: 'logistics',
-      contactPerson: language === 'ar' ? 'سارة محمد أحمد' : 'Sara Mohamed Ahmed',
-      phone: '+201987654321',
-      email: 'contact@fast-shipping.com',
-      address: language === 'ar' ? 'الإسكندرية - محطة مصر' : 'Alexandria - Misr Station',
-      status: 'active',
-      rating: 4.7,
-      vehicleCount: 8,
-      totalContracts: 42,
-      contractValue: 1650000,
-      lastPayment: '2024-11-06',
-      services: [
-        language === 'ar' ? 'نقل سريع' : 'Express Delivery',
-        language === 'ar' ? 'تخزين' : 'Warehousing',
-      ],
-      performance: 88,
-    },
-  ];
+  const customers: any[] = [];
+  const vendors: any[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -323,7 +212,10 @@ export default function CustomersPage() {
                 </select>
               </div>
             </div>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={() => router.push(activeTab === 'customers' ? '/admin/customers/new' : '/admin/vendors/new')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Plus className="w-4 h-4" />
               {activeTab === 'customers'
                 ? language === 'ar'

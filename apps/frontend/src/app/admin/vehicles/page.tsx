@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Truck,
@@ -16,100 +17,80 @@ import {
   Award,
   Clock,
   CheckCircle,
+  Package,
+  Hammer,
+  Construction,
+  ShoppingCart,
+  Container,
+  Boxes,
+  Building2,
+  DollarSign,
+  Wrench,
+  X,
+  Droplet,
 } from 'lucide-react';
 
 export default function VehiclesPage() {
+  const router = useRouter();
   const { language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [ownershipFilter, setOwnershipFilter] = useState('all');
+  const [customVehicles, setCustomVehicles] = useState<any[]>([]);
+  const [showFuelModal, setShowFuelModal] = useState(false);
+  const [showPartsModal, setShowPartsModal] = useState(false);
+  const [selectedVehicle, setSelectedVehicle] = useState<any>(null);
+  const [inventory, setInventory] = useState<any[]>([]);
 
-  const vehicles = [
-    {
-      id: 'V-001',
-      plateNumber: 'ق أ ح 1234',
-      make: 'Mercedes',
-      model: 'Actros 2545',
-      year: 2022,
-      type: language === 'ar' ? 'شاحنة ثقيلة' : 'Heavy Truck',
-      capacity: '25 طن',
-      status: 'available',
-      driver: {
-        name: language === 'ar' ? 'أحمد محمد علي' : 'Ahmed Mohamed Ali',
-        phone: '+201234567890',
-        license: 'DL123456',
-        rating: 4.8,
-      },
-      owner: {
-        name: language === 'ar' ? 'شركة النقل المتطور' : 'Advanced Transport Company',
-        phone: '+201987654321',
-      },
-      currentLocation: language === 'ar' ? 'القاهرة - مدينة نصر' : 'Cairo - Nasr City',
-      lastService: '2024-10-15',
-      nextService: '2024-12-15',
-      insurance: '2025-03-20',
-      license: '2025-06-30',
-      fuel: 85,
-      mileage: 125000,
-      earnings: 45000,
+  // Vehicle Types Categories
+  const vehicleTypes = {
+    'jumbo': { 
+      ar: 'چامبو', 
+      en: 'Jumbo',
+      icon: Truck 
     },
-    {
-      id: 'V-002',
-      plateNumber: 'ب ن م 5678',
-      make: 'Volvo',
-      model: 'FH 500',
-      year: 2021,
-      type: language === 'ar' ? 'شاحنة متوسطة' : 'Medium Truck',
-      capacity: '18 طن',
-      status: 'in-transit',
-      driver: {
-        name: language === 'ar' ? 'محمود حسن أحمد' : 'Mahmoud Hassan Ahmed',
-        phone: '+201555444333',
-        license: 'DL789012',
-        rating: 4.6,
-      },
-      owner: {
-        name: language === 'ar' ? 'مؤسسة الشحن السريع' : 'Fast Shipping Corporation',
-        phone: '+201777888999',
-      },
-      currentLocation: language === 'ar' ? 'الإسكندرية - الميناء' : 'Alexandria - Port',
-      lastService: '2024-09-20',
-      nextService: '2024-11-20',
-      insurance: '2025-01-15',
-      license: '2025-04-10',
-      fuel: 62,
-      mileage: 98000,
-      earnings: 38000,
+    'trailers': { 
+      ar: 'تريلات', 
+      en: 'Trailers',
+      icon: Container 
     },
-    {
-      id: 'V-003',
-      plateNumber: 'س ت ع 9012',
-      make: 'Scania',
-      model: 'R450',
-      year: 2023,
-      type: language === 'ar' ? 'شاحنة خطرة' : 'Hazardous Truck',
-      capacity: '20 طن',
-      status: 'maintenance',
-      driver: {
-        name: language === 'ar' ? 'خالد عبد الرحمن' : 'Khaled Abdel Rahman',
-        phone: '+201666555444',
-        license: 'DL345678',
-        rating: 4.9,
-      },
-      owner: {
-        name: language === 'ar' ? 'شركة النقل الآمن' : 'Safe Transport Company',
-        phone: '+201333222111',
-      },
-      currentLocation:
-        language === 'ar' ? 'ورشة الصيانة - القاهرة' : 'Maintenance Workshop - Cairo',
-      lastService: '2024-11-05',
-      nextService: '2025-01-05',
-      insurance: '2025-08-12',
-      license: '2025-09-25',
-      fuel: 0,
-      mileage: 45000,
-      earnings: 52000,
+    'spreading-tractors': { 
+      ar: 'جرارات فرش', 
+      en: 'Spreading Tractors',
+      icon: Construction 
     },
-  ];
+    'counter-tractors': { 
+      ar: 'جرارات كونتر', 
+      en: 'Counter Tractors',
+      icon: Construction 
+    },
+    'sweeper': { 
+      ar: 'كساحة', 
+      en: 'Sweeper',
+      icon: Package 
+    },
+    'jumbo-small-cooler': { 
+      ar: 'چامبو براد صغير', 
+      en: 'Jumbo Small Cooler',
+      icon: Boxes 
+    },
+    'jumbo-large-cooler': { 
+      ar: 'چامبو براد كبير', 
+      en: 'Jumbo Large Cooler',
+      icon: Building2 
+    },
+  };
+
+  // Load custom vehicles and inventory from localStorage
+  useEffect(() => {
+    const savedVehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+    const savedInventory = JSON.parse(localStorage.getItem('inventory') || '[]');
+    setCustomVehicles(savedVehicles);
+    setInventory(savedInventory);
+  }, []);
+
+  const defaultVehicles: any[] = [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -142,15 +123,35 @@ export default function VehiclesPage() {
     return 'text-red-600';
   };
 
+  const getVehicleIcon = (category: string) => {
+    return vehicleTypes[category as keyof typeof vehicleTypes]?.icon || Truck;
+  };
+
+  // Merge default vehicles with custom vehicles from localStorage
+  const vehicles = [...defaultVehicles, ...customVehicles];
+
   const filteredVehicles = vehicles.filter((vehicle) => {
     const matchesSearch =
       vehicle.plateNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vehicle.driver.name.toLowerCase().includes(searchQuery.toLowerCase());
+      (vehicle.make && vehicle.make.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (vehicle.model && vehicle.model.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      vehicle.driver.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      vehicle.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (vehicle.id && vehicle.id.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === 'all' || vehicle.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesType = typeFilter === 'all' || vehicle.category === typeFilter;
+    const matchesOwnership = ownershipFilter === 'all' || vehicle.ownership === ownershipFilter;
+    return matchesSearch && matchesStatus && matchesType && matchesOwnership;
   });
+
+  const stats = {
+    total: vehicles.length,
+    available: vehicles.filter(v => v.status === 'available').length,
+    inTransit: vehicles.filter(v => v.status === 'in-transit').length,
+    maintenance: vehicles.filter(v => v.status === 'maintenance').length,
+    rental: vehicles.filter(v => v.ownership === 'rental').length,
+    totalRevenue: vehicles.reduce((sum, v) => sum + v.earnings, 0),
+  };
 
   return (
     <div className={`min-h-screen bg-gray-50 ${language === 'ar' ? 'font-arabic' : 'font-inter'}`}>
@@ -158,138 +159,235 @@ export default function VehiclesPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {language === 'ar' ? 'إدارة المركبات' : 'Vehicle Management'}
+            {language === 'ar' ? 'إدارة الأسطول - إيجار من الغير' : 'Fleet Management - External Rental'}
           </h1>
           <p className="text-gray-600">
             {language === 'ar'
-              ? 'إدارة أسطول المركبات والسائقين ومراقبة الأداء'
-              : 'Manage vehicle fleet, drivers, and monitor performance'}
+              ? 'إدارة شاملة لجميع المركبات والمعدات الثقيلة المؤجرة من الغير'
+              : 'Comprehensive management of all externally rented vehicles and heavy equipment'}
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <Truck className="w-8 h-8 text-blue-500 mb-2" />
-              <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">47</p>
-                <p className="text-sm text-gray-600">
-                  {language === 'ar' ? 'إجمالي المركبات' : 'Total Vehicles'}
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+                <p className="text-xs text-gray-600">
+                  {language === 'ar' ? 'إجمالي الأسطول' : 'Total Fleet'}
                 </p>
               </div>
+              <Truck className="w-8 h-8 text-blue-500" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
-              <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">32</p>
-                <p className="text-sm text-gray-600">{language === 'ar' ? 'متاحة' : 'Available'}</p>
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-green-600">{stats.available}</p>
+                <p className="text-xs text-gray-600">{language === 'ar' ? 'متاحة' : 'Available'}</p>
               </div>
+              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <Clock className="w-8 h-8 text-orange-500 mb-2" />
-              <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">12</p>
-                <p className="text-sm text-gray-600">
-                  {language === 'ar' ? 'في الطريق' : 'In Transit'}
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{stats.inTransit}</p>
+                <p className="text-xs text-gray-600">
+                  {language === 'ar' ? 'في العمل' : 'Active'}
                 </p>
               </div>
+              <Clock className="w-8 h-8 text-blue-500" />
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm border">
-            <div className="flex items-center">
-              <Award className="w-8 h-8 text-purple-500 mb-2" />
-              <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">4.7</p>
-                <p className="text-sm text-gray-600">
-                  {language === 'ar' ? 'متوسط التقييم' : 'Average Rating'}
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-yellow-600">{stats.maintenance}</p>
+                <p className="text-xs text-gray-600">
+                  {language === 'ar' ? 'صيانة' : 'Maintenance'}
                 </p>
               </div>
+              <Award className="w-8 h-8 text-yellow-500" />
+            </div>
+          </div>
+
+          <div className="bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-purple-600">{stats.rental}</p>
+                <p className="text-xs text-gray-600">
+                  {language === 'ar' ? 'إيجار' : 'Rental'}
+                </p>
+              </div>
+              <DollarSign className="w-8 h-8 text-purple-500" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-lg shadow-sm border border-blue-600">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xl font-bold text-white">
+                  {(stats.totalRevenue / 1000).toFixed(0)}K
+                </p>
+                <p className="text-xs text-blue-100">
+                  {language === 'ar' ? 'إجمالي الأرباح' : 'Total Revenue'}
+                </p>
+              </div>
+              <DollarSign className="w-8 h-8 text-blue-100" />
             </div>
           </div>
         </div>
 
         {/* Filters and Actions */}
         <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-            <div className="flex flex-col md:flex-row gap-4 flex-1">
-              {/* Search */}
+          <div className="flex flex-col gap-4">
+            {/* Search and Main Actions */}
+            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
               <div className="relative flex-1 max-w-md">
                 <Search
                   className={`absolute ${language === 'ar' ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5`}
                 />
                 <input
                   type="text"
-                  placeholder={language === 'ar' ? 'البحث عن المركبات...' : 'Search vehicles...'}
+                  placeholder={language === 'ar' ? 'البحث في الأسطول...' : 'Search fleet...'}
                   className={`w-full ${language === 'ar' ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
 
-              {/* Status Filter */}
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-gray-400" />
-                <select
-                  aria-label={language === 'ar' ? 'تصفية حسب الحالة' : 'Filter by status'}
-                  className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => router.push('/admin/vehicles/new')}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <option value="all">{language === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
-                  <option value="available">{language === 'ar' ? 'متاح' : 'Available'}</option>
-                  <option value="in-transit">
-                    {language === 'ar' ? 'في الطريق' : 'In Transit'}
-                  </option>
-                  <option value="maintenance">{language === 'ar' ? 'صيانة' : 'Maintenance'}</option>
-                </select>
+                  <Plus className="w-4 h-4" />
+                  {language === 'ar' ? 'إضافة مركبة/معدة' : 'Add Vehicle/Equipment'}
+                </button>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Plus className="w-4 h-4" />
-                {language === 'ar' ? 'إضافة مركبة' : 'Add Vehicle'}
-              </button>
+            {/* Advanced Filters */}
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">
+                  {language === 'ar' ? 'تصفية:' : 'Filters:'}
+                </span>
+              </div>
+              
+              {/* Type Filter */}
+              <select
+                aria-label={language === 'ar' ? 'تصفية حسب النوع' : 'Filter by type'}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+              >
+                <option value="all">{language === 'ar' ? 'جميع الأنواع' : 'All Types'}</option>
+                <option value="jumbo">{language === 'ar' ? 'چامبو' : 'Jumbo'}</option>
+                <option value="trailers">{language === 'ar' ? 'تريلات' : 'Trailers'}</option>
+                <option value="spreading-tractors">{language === 'ar' ? 'جرارات فرش' : 'Spreading Tractors'}</option>
+                <option value="counter-tractors">{language === 'ar' ? 'جرارات كونتر' : 'Counter Tractors'}</option>
+                <option value="sweeper">{language === 'ar' ? 'كساحة' : 'Sweeper'}</option>
+                <option value="jumbo-small-cooler">{language === 'ar' ? 'چامبو براد صغير' : 'Small Cooler Jumbo'}</option>
+                <option value="jumbo-large-cooler">{language === 'ar' ? 'چامبو براد كبير' : 'Large Cooler Jumbo'}</option>
+              </select>
+
+              {/* Status Filter */}
+              <select
+                aria-label={language === 'ar' ? 'تصفية حسب الحالة' : 'Filter by status'}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="all">{language === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
+                <option value="available">{language === 'ar' ? 'متاح' : 'Available'}</option>
+                <option value="in-transit">{language === 'ar' ? 'في العمل' : 'Active'}</option>
+                <option value="maintenance">{language === 'ar' ? 'صيانة' : 'Maintenance'}</option>
+              </select>
+
+              {/* Ownership Filter */}
+              <select
+                aria-label={language === 'ar' ? 'تصفية حسب الملكية' : 'Filter by ownership'}
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-blue-50 border-blue-300"
+                value={ownershipFilter}
+                onChange={(e) => setOwnershipFilter(e.target.value)}
+              >
+                <option value="all">{language === 'ar' ? 'جميع الملكيات' : 'All Ownership'}</option>
+                <option value="rental">{language === 'ar' ? 'إيجار من الغير' : 'External Rental'}</option>
+                <option value="owned">{language === 'ar' ? 'ملك خاص' : 'Owned'}</option>
+              </select>
+
+              {/* Results Count */}
+              <div className="flex items-center gap-2 mr-auto bg-gray-100 px-3 py-1.5 rounded-lg">
+                <span className="text-sm text-gray-600">
+                  {language === 'ar' ? 'النتائج:' : 'Results:'} 
+                  <span className="font-bold text-gray-900 ml-1">{filteredVehicles.length}</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Vehicles Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredVehicles.map((vehicle) => (
-            <div
-              key={vehicle.id}
-              className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
-            >
-              <div className="p-6">
-                {/* Header */}
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      {vehicle.make} {vehicle.model}
-                    </h3>
-                    <p className="text-sm text-gray-500">
-                      {vehicle.plateNumber} • {vehicle.year}
-                    </p>
+          {filteredVehicles.map((vehicle) => {
+            const VehicleIcon = getVehicleIcon(vehicle.category);
+            return (
+              <div
+                key={vehicle.id}
+                className="bg-white rounded-lg shadow-sm border hover:shadow-md transition-shadow"
+              >
+                <div className="p-6">
+                  {/* Header with Icon */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-50 rounded-lg">
+                        <VehicleIcon className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          {vehicle.make} {vehicle.model}
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {vehicle.plateNumber} • {vehicle.year}
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(vehicle.status)}`}
+                    >
+                      {getStatusText(vehicle.status)}
+                    </span>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(vehicle.status)}`}
-                  >
-                    {getStatusText(vehicle.status)}
-                  </span>
-                </div>
+
+                  {/* Rental Badge */}
+                  <div className="mb-4 p-3 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="w-4 h-4 text-purple-600" />
+                        <span className="text-sm font-medium text-purple-900">
+                          {language === 'ar' ? 'إيجار من الغير' : 'External Rental'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-purple-900">
+                          {vehicle.rentalRate.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-purple-700">
+                          {language === 'ar' ? 'ج.م/' : 'EGP/'}{vehicle.rentalPeriod}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
                 {/* Vehicle Info */}
-                <div className="space-y-3 mb-4">
+                <div className="space-y-3 mb-4 p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
                       {language === 'ar' ? 'النوع:' : 'Type:'}
@@ -298,16 +396,16 @@ export default function VehiclesPage() {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      {language === 'ar' ? 'الحمولة:' : 'Capacity:'}
+                      {language === 'ar' ? 'الحمولة/السعة:' : 'Capacity:'}
                     </span>
                     <span className="text-sm font-medium text-gray-900">{vehicle.capacity}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">
-                      {language === 'ar' ? 'المسافة المقطوعة:' : 'Mileage:'}
+                      {language === 'ar' ? 'ساعات العمل:' : 'Working Hours:'}
                     </span>
                     <span className="text-sm font-medium text-gray-900">
-                      {vehicle.mileage.toLocaleString()} {language === 'ar' ? 'كم' : 'km'}
+                      {vehicle.mileage ? vehicle.mileage.toLocaleString() : '0'} {language === 'ar' ? 'ساعة' : 'hrs'}
                     </span>
                   </div>
                 </div>
@@ -321,8 +419,8 @@ export default function VehiclesPage() {
                         {language === 'ar' ? 'مستوى الوقود' : 'Fuel Level'}
                       </span>
                     </div>
-                    <span className={`text-sm font-medium ${getFuelColor(vehicle.fuel)}`}>
-                      {vehicle.fuel}%
+                    <span className={`text-sm font-medium ${getFuelColor(vehicle.fuel || 0)}`}>
+                      {vehicle.fuel || 0}%
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
@@ -334,14 +432,31 @@ export default function VehiclesPage() {
                             ? 'bg-yellow-500'
                             : 'bg-red-500'
                       }`}
-                      style={{ width: `${vehicle.fuel}%` }}
+                      style={{ width: `${vehicle.fuel || 0}%` }}
                     ></div>
                   </div>
                 </div>
 
-                {/* Driver Info */}
+                {/* Owner Info */}
                 <div className="border-t pt-4 mb-4">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-3 mb-3">
+                    <Building2 className="w-4 h-4 text-gray-400 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-xs text-gray-500 mb-1">
+                        {language === 'ar' ? 'المالك:' : 'Owner:'}
+                      </p>
+                      <span className="text-sm font-medium text-gray-900">
+                        {vehicle.owner.name}
+                      </span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Phone className="w-3 h-3 text-gray-400" />
+                        <span className="text-xs text-gray-600">{vehicle.owner.phone}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Driver Info */}
+                  <div className="flex items-start gap-3 pt-3 border-t">
                     <User className="w-4 h-4 text-gray-400 mt-0.5" />
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -376,46 +491,381 @@ export default function VehiclesPage() {
                     <span className="text-gray-600">
                       {language === 'ar' ? 'الصيانة القادمة:' : 'Next Service:'}
                     </span>
-                    <span className="text-gray-900">{vehicle.nextService}</span>
+                    <span className="text-gray-900">{vehicle.nextService || (language === 'ar' ? 'غير محدد' : 'N/A')}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">
                       {language === 'ar' ? 'التأمين:' : 'Insurance:'}
                     </span>
-                    <span className="text-gray-900">{vehicle.insurance}</span>
+                    <span className="text-gray-900">{vehicle.insurance || (language === 'ar' ? 'غير محدد' : 'N/A')}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">
                       {language === 'ar' ? 'الترخيص:' : 'License:'}
                     </span>
-                    <span className="text-gray-900">{vehicle.license}</span>
+                    <span className="text-gray-900">{vehicle.license || (language === 'ar' ? 'غير محدد' : 'N/A')}</span>
                   </div>
                 </div>
 
-                {/* Earnings */}
-                <div className="flex items-center justify-between mb-4 p-2 bg-blue-50 rounded">
-                  <span className="text-sm text-blue-800">
-                    {language === 'ar' ? 'الأرباح هذا الشهر:' : 'This Month Earnings:'}
-                  </span>
-                  <span className="text-sm font-bold text-blue-800">
-                    {vehicle.earnings.toLocaleString()} {language === 'ar' ? 'ج.م' : 'EGP'}
-                  </span>
+                {/* Performance Metrics */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="p-2 bg-green-50 rounded border border-green-200">
+                    <p className="text-xs text-green-700 mb-1">
+                      {language === 'ar' ? 'الإيرادات الشهرية' : 'Monthly Revenue'}
+                    </p>
+                    <p className="text-sm font-bold text-green-900">
+                      {vehicle.earnings ? vehicle.earnings.toLocaleString() : '0'} {language === 'ar' ? 'ج.م' : 'EGP'}
+                    </p>
+                  </div>
+                  <div className="p-2 bg-blue-50 rounded border border-blue-200">
+                    <p className="text-xs text-blue-700 mb-1">
+                      {language === 'ar' ? 'معدل الاستخدام' : 'Utilization'}
+                    </p>
+                    <p className="text-sm font-bold text-blue-900">
+                      {Math.floor(Math.random() * 30 + 60)}%
+                    </p>
+                  </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t">
-                  <button className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
-                    {language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                <div className="grid grid-cols-2 gap-2 pt-4 border-t mb-2">
+                  <button className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium">
+                    {language === 'ar' ? 'تفاصيل' : 'Details'}
                   </button>
-                  <button className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium">
-                    {language === 'ar' ? 'تتبع مباشر' : 'Live Track'}
+                  <button className="px-3 py-2 bg-purple-50 text-purple-600 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium">
+                    {language === 'ar' ? 'تجديد' : 'Renew'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => {
+                      setSelectedVehicle(vehicle);
+                      setShowFuelModal(true);
+                    }}
+                    className="px-3 py-2 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded-lg hover:bg-yellow-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                  >
+                    <Droplet className="w-4 h-4" />
+                    {language === 'ar' ? 'وقود' : 'Fuel'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setSelectedVehicle(vehicle);
+                      setShowPartsModal(true);
+                    }}
+                    className="px-3 py-2 bg-green-50 text-green-700 border border-green-300 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium flex items-center justify-center gap-1"
+                  >
+                    <Wrench className="w-4 h-4" />
+                    {language === 'ar' ? 'قطع' : 'Parts'}
                   </button>
                 </div>
               </div>
             </div>
-          ))}
+          );
+          })}
         </div>
       </div>
+
+      {/* Fuel Modal */}
+      {showFuelModal && selectedVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'صرف وقود' : 'Issue Fuel'}
+              </h3>
+              <button onClick={() => { setShowFuelModal(false); setSelectedVehicle(null); }} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                {selectedVehicle.make} {selectedVehicle.model}
+              </p>
+              <p className="text-sm text-gray-600">
+                {selectedVehicle.plateNumber} • {language === 'ar' ? 'الوقود الحالي:' : 'Current Fuel:'} {selectedVehicle.fuel || 0}%
+              </p>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const fuelType = formData.get('fuelType') as string;
+              const quantity = Number(formData.get('quantity'));
+              const pricePerUnit = Number(formData.get('pricePerUnit'));
+              
+              // Find fuel in inventory
+              const fuelItem = inventory.find(i => i.category === 'Fuel' && i.name.toLowerCase().includes(fuelType.toLowerCase()));
+              
+              if (!fuelItem) {
+                alert(language === 'ar' ? 'نوع الوقود غير متوفر في المخزون' : 'Fuel type not available in inventory');
+                return;
+              }
+              
+              if (fuelItem.quantity < quantity) {
+                alert(language === 'ar' ? 'كمية غير كافية في المخزون' : 'Insufficient fuel in inventory');
+                return;
+              }
+              
+              // Update inventory
+              const updatedInventory = inventory.map(i => {
+                if (i.id === fuelItem.id) {
+                  const newQuantity = i.quantity - quantity;
+                  return {
+                    ...i,
+                    quantity: newQuantity,
+                    status: newQuantity === 0 ? 'out-of-stock' : newQuantity < i.minStock ? 'low-stock' : 'in-stock'
+                  };
+                }
+                return i;
+              });
+              setInventory(updatedInventory);
+              localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+              
+              // Create movement record
+              const movements = JSON.parse(localStorage.getItem('warehouseMovements') || '[]');
+              const newMovement = {
+                id: movements.length + 1,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: 'outbound' as const,
+                item: fuelItem.name,
+                quantity: quantity,
+                unit: fuelItem.unit,
+                from: 'Fuel Storage',
+                to: `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plateNumber})`,
+                reference: `FUEL-${selectedVehicle.plateNumber}`,
+                operator: 'Current User',
+                notes: formData.get('notes') as string
+              };
+              movements.push(newMovement);
+              localStorage.setItem('warehouseMovements', JSON.stringify(movements));
+
+              // Create journal entry
+              const journalEntries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+              const totalCost = quantity * pricePerUnit;
+              const newEntry = {
+                id: `JE-${String(journalEntries.length + 1).padStart(4, '0')}`,
+                date: new Date().toISOString().split('T')[0],
+                reference: `FUEL-${selectedVehicle.plateNumber}`,
+                description: `${language === 'ar' ? 'صرف وقود للمركبة' : 'Fuel issued to vehicle'} ${selectedVehicle.plateNumber} - ${quantity} ${fuelItem.unit}`,
+                type: 'expense',
+                entries: [
+                  {
+                    account: language === 'ar' ? 'مصروفات الوقود' : 'Fuel Expenses',
+                    accountCode: '5140',
+                    debit: totalCost,
+                    credit: 0
+                  },
+                  {
+                    account: language === 'ar' ? 'المخزون - وقود' : 'Inventory - Fuel',
+                    accountCode: '1160',
+                    debit: 0,
+                    credit: totalCost
+                  }
+                ],
+                totalDebit: totalCost,
+                totalCredit: totalCost,
+                status: 'posted',
+                createdBy: 'Current User',
+                approvedBy: 'Auto-posted'
+              };
+              journalEntries.push(newEntry);
+              localStorage.setItem('journalEntries', JSON.stringify(journalEntries));
+              
+              alert(language === 'ar' ? 'تم صرف الوقود بنجاح' : 'Fuel issued successfully');
+              setShowFuelModal(false);
+              setSelectedVehicle(null);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'نوع الوقود' : 'Fuel Type'} *
+                  </label>
+                  <select name="fuelType" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر نوع الوقود' : 'Select Fuel Type'}</option>
+                    {inventory.filter(item => item.category === 'Fuel' && item.quantity > 0).map(item => (
+                      <option key={item.id} value={item.name}>
+                        {item.name} - {language === 'ar' ? 'متوفر' : 'Available'}: {item.quantity} {item.unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية (لتر)' : 'Quantity (Liters)'} *
+                  </label>
+                  <input type="number" name="quantity" required min="1" step="0.01" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'السعر لكل لتر (جنيه)' : 'Price per Liter (EGP)'} *
+                  </label>
+                  <input type="number" name="pricePerUnit" required min="0" step="0.01" className="w-full px-3 py-2 border rounded-lg" defaultValue="2.33" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'ملاحظات' : 'Notes'}
+                  </label>
+                  <textarea name="notes" rows={2} className="w-full px-3 py-2 border rounded-lg"></textarea>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => { setShowFuelModal(false); setSelectedVehicle(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700">
+                  {language === 'ar' ? 'صرف' : 'Issue'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Parts Modal */}
+      {showPartsModal && selectedVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                {language === 'ar' ? 'صرف قطع غيار' : 'Issue Spare Parts'}
+              </h3>
+              <button onClick={() => { setShowPartsModal(false); setSelectedVehicle(null); }} className="text-gray-500 hover:text-gray-700">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm font-medium text-gray-900 mb-1">
+                {selectedVehicle.make} {selectedVehicle.model}
+              </p>
+              <p className="text-sm text-gray-600">
+                {selectedVehicle.plateNumber} • {selectedVehicle.type}
+              </p>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const formData = new FormData(e.currentTarget);
+              const itemId = Number(formData.get('item'));
+              const quantity = Number(formData.get('quantity'));
+              
+              const item = inventory.find(i => i.id === itemId);
+              if (item && item.quantity < quantity) {
+                alert(language === 'ar' ? 'كمية غير كافية في المخزون' : 'Insufficient stock');
+                return;
+              }
+              
+              // Update inventory
+              const updatedInventory = inventory.map(i => {
+                if (i.id === itemId) {
+                  const newQuantity = i.quantity - quantity;
+                  return {
+                    ...i,
+                    quantity: newQuantity,
+                    status: newQuantity === 0 ? 'out-of-stock' : newQuantity < i.minStock ? 'low-stock' : 'in-stock'
+                  };
+                }
+                return i;
+              });
+              setInventory(updatedInventory);
+              localStorage.setItem('inventory', JSON.stringify(updatedInventory));
+              
+              // Create movement record
+              const movements = JSON.parse(localStorage.getItem('warehouseMovements') || '[]');
+              const newMovement = {
+                id: movements.length + 1,
+                date: new Date().toISOString().split('T')[0],
+                time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+                type: 'outbound' as const,
+                item: item?.name || '',
+                quantity: quantity,
+                unit: item?.unit || 'pcs',
+                from: 'Spare Parts Warehouse',
+                to: `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plateNumber})`,
+                reference: `MAINT-${selectedVehicle.plateNumber}`,
+                operator: 'Current User',
+                notes: formData.get('notes') as string
+              };
+              movements.push(newMovement);
+              localStorage.setItem('warehouseMovements', JSON.stringify(movements));
+
+              // Create journal entry
+              const journalEntries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+              const totalCost = (item?.value || 0) * quantity;
+              const newEntry = {
+                id: `JE-${String(journalEntries.length + 1).padStart(4, '0')}`,
+                date: new Date().toISOString().split('T')[0],
+                reference: `MAINT-${selectedVehicle.plateNumber}`,
+                description: `${language === 'ar' ? 'صرف قطع غيار للمركبة' : 'Parts issued to vehicle'} ${selectedVehicle.plateNumber} - ${item?.name}`,
+                type: 'expense',
+                entries: [
+                  {
+                    account: language === 'ar' ? 'مصروفات الصيانة' : 'Maintenance Expenses',
+                    accountCode: '5130',
+                    debit: totalCost,
+                    credit: 0
+                  },
+                  {
+                    account: language === 'ar' ? 'المخزون - قطع غيار' : 'Inventory - Spare Parts',
+                    accountCode: '1150',
+                    debit: 0,
+                    credit: totalCost
+                  }
+                ],
+                totalDebit: totalCost,
+                totalCredit: totalCost,
+                status: 'posted',
+                createdBy: 'Current User',
+                approvedBy: 'Auto-posted'
+              };
+              journalEntries.push(newEntry);
+              localStorage.setItem('journalEntries', JSON.stringify(journalEntries));
+              
+              alert(language === 'ar' ? 'تم صرف قطع الغيار بنجاح' : 'Parts issued successfully');
+              setShowPartsModal(false);
+              setSelectedVehicle(null);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'قطعة الغيار' : 'Spare Part'} *
+                  </label>
+                  <select name="item" required className="w-full px-3 py-2 border rounded-lg">
+                    <option value="">{language === 'ar' ? 'اختر قطعة الغيار' : 'Select Spare Part'}</option>
+                    {inventory.filter(item => item.category === 'Spare Parts' && item.quantity > 0).map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.name} ({item.sku}) - {language === 'ar' ? 'متوفر' : 'Available'}: {item.quantity} {item.unit} - {item.value} {language === 'ar' ? 'ريال' : 'SAR'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'الكمية' : 'Quantity'} *
+                  </label>
+                  <input type="number" name="quantity" required min="1" className="w-full px-3 py-2 border rounded-lg" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {language === 'ar' ? 'ملاحظات' : 'Notes'}
+                  </label>
+                  <textarea name="notes" rows={3} className="w-full px-3 py-2 border rounded-lg" placeholder={language === 'ar' ? 'سبب الصرف أو تفاصيل الصيانة' : 'Reason or maintenance details'}></textarea>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <button type="button" onClick={() => { setShowPartsModal(false); setSelectedVehicle(null); }} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                  {language === 'ar' ? 'إلغاء' : 'Cancel'}
+                </button>
+                <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                  {language === 'ar' ? 'صرف' : 'Issue'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

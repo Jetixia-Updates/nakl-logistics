@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/contexts/LanguageContext';
+import api from '@/lib/api';
 import {
   FileText,
   Calendar,
@@ -15,61 +17,63 @@ import {
   Eye,
   Edit,
   Trash2,
+  AlertCircle,
 } from 'lucide-react';
+
+interface Tender {
+  id: string;
+  tenderNumber: string;
+  title: string;
+  titleAr: string;
+  description: string;
+  descriptionAr: string;
+  status: string;
+  type: string;
+  estimatedValue: number;
+  currency: string;
+  submissionDeadline: string | null;
+  publishDate: string | null;
+  createdAt: string;
+  _count?: {
+    bids: number;
+    documentPurchases: number;
+  };
+}
+
+interface Stats {
+  totalTenders: number;
+  activeTenders: number;
+  completedTenders: number;
+  totalBids: number;
+  totalValue: number;
+}
+
+const mockTenders: Tender[] = [];
 
 export default function TendersPage() {
   const { language } = useLanguage();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  
+  const stats: Stats = {
+    totalTenders: 0,
+    activeTenders: 0,
+    completedTenders: 0,
+    totalBids: 0,
+    totalValue: 0,
+  };
+  
+  const loading = false;
+  const error = '';
 
-  const tenders = [
-    {
-      id: 'TND-001',
-      title:
-        language === 'ar'
-          ? 'نقل بضائع من القاهرة إلى الإسكندرية'
-          : 'Cargo Transport Cairo to Alexandria',
-      value: '25,000',
-      currency: 'EGP',
-      deadline: '2024-12-15',
-      status: 'active',
-      bidsCount: 12,
-      description:
-        language === 'ar' ? 'نقل 500 طن من البضائع المتنوعة' : 'Transport 500 tons of mixed cargo',
-      createdDate: '2024-11-01',
-    },
-    {
-      id: 'TND-002',
-      title:
-        language === 'ar'
-          ? 'خدمات التخليص الجمركي - ميناء السخنة'
-          : 'Customs Clearance Services - Sokhna Port',
-      value: '15,000',
-      currency: 'EGP',
-      deadline: '2024-12-20',
-      status: 'pending',
-      bidsCount: 8,
-      description:
-        language === 'ar'
-          ? 'تخليص جمركي لحاويات متعددة'
-          : 'Customs clearance for multiple containers',
-      createdDate: '2024-11-05',
-    },
-    {
-      id: 'TND-003',
-      title: language === 'ar' ? 'نقل المواد الكيميائية الخطرة' : 'Hazardous Chemical Transport',
-      value: '45,000',
-      currency: 'EGP',
-      deadline: '2024-11-30',
-      status: 'closed',
-      bidsCount: 15,
-      description:
-        language === 'ar'
-          ? 'نقل آمن للمواد الكيميائية مع التراخيص اللازمة'
-          : 'Safe transport of chemicals with required licenses',
-      createdDate: '2024-10-20',
-    },
-  ];
+  const handleViewTender = (id: string) => {
+    router.push(`/admin/tenders/${id}`);
+  };
+
+  const handleCreateTender = () => {
+    router.push('/admin/tenders/new');
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -93,17 +97,46 @@ export default function TendersPage() {
     return statusMap[status as keyof typeof statusMap] || status;
   };
 
-  const filteredTenders = tenders.filter((tender) => {
+  const filteredTenders = mockTenders.filter((tender) => {
     const matchesSearch =
       tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tender.id.toLowerCase().includes(searchQuery.toLowerCase());
+      tender.titleAr.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tender.tenderNumber.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || tender.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">{language === 'ar' ? 'جاري التحميل...' : 'Loading...'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-gray-50 ${language === 'ar' ? 'font-arabic' : 'font-inter'}`}>
       <div className="container mx-auto px-4 py-8">
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <div>
+              <p className="text-sm text-yellow-800">
+                {language === 'ar' ? 'تحذير: ' : 'Warning: '}
+                {error}
+              </p>
+              <p className="text-xs text-yellow-600 mt-1">
+                {language === 'ar' 
+                  ? 'يتم عرض بيانات تجريبية. يرجى التأكد من تشغيل الخادم وتسجيل الدخول.'
+                  : 'Showing mock data. Please ensure the server is running and you are logged in.'}
+              </p>
+            </div>
+          </div>
+        )}
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -122,7 +155,7 @@ export default function TendersPage() {
             <div className="flex items-center">
               <FileText className="w-8 h-8 text-blue-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">24</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalTenders}</p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'إجمالي المناقصات' : 'Total Tenders'}
                 </p>
@@ -134,7 +167,7 @@ export default function TendersPage() {
             <div className="flex items-center">
               <Clock className="w-8 h-8 text-green-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">8</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.activeTenders}</p>
                 <p className="text-sm text-gray-600">{language === 'ar' ? 'نشطة' : 'Active'}</p>
               </div>
             </div>
@@ -144,7 +177,7 @@ export default function TendersPage() {
             <div className="flex items-center">
               <Users className="w-8 h-8 text-orange-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">156</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalBids}</p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'إجمالي العروض' : 'Total Bids'}
                 </p>
@@ -156,7 +189,9 @@ export default function TendersPage() {
             <div className="flex items-center">
               <DollarSign className="w-8 h-8 text-purple-500 mb-2" />
               <div className={`${language === 'ar' ? 'mr-4' : 'ml-4'}`}>
-                <p className="text-2xl font-bold text-gray-900">2.5M</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {(stats.totalValue / 1000000).toFixed(1)}M
+                </p>
                 <p className="text-sm text-gray-600">
                   {language === 'ar' ? 'القيمة الإجمالية (ج.م)' : 'Total Value (EGP)'}
                 </p>
@@ -200,9 +235,12 @@ export default function TendersPage() {
               </div>
             </div>
 
-            {/* Actions */}
+              {/* Actions */}
             <div className="flex gap-2">
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button 
+                onClick={handleCreateTender}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 <Plus className="w-4 h-4" />
                 {language === 'ar' ? 'إضافة مناقصة' : 'Add Tender'}
               </button>
@@ -216,68 +254,97 @@ export default function TendersPage() {
 
         {/* Tenders List */}
         <div className="bg-white rounded-lg shadow-sm border">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 border-b">
-                <tr>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'رقم المناقصة' : 'Tender ID'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'العنوان' : 'Title'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'القيمة' : 'Value'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'الموعد النهائي' : 'Deadline'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'العروض' : 'Bids'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'الحالة' : 'Status'}
-                  </th>
-                  <th
-                    className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
-                  >
-                    {language === 'ar' ? 'الإجراءات' : 'Actions'}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTenders.map((tender) => (
+          {filteredTenders.length === 0 ? (
+            <div className="text-center py-12">
+              <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                {language === 'ar' ? 'لا توجد مناقصات' : 'No tenders found'}
+              </h3>
+              <p className="text-gray-500 mb-6">
+                {language === 'ar' 
+                  ? 'ابدأ بإضافة مناقصة جديدة للنظام'
+                  : 'Start by adding a new tender to the system'}
+              </p>
+              <button 
+                onClick={handleCreateTender}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                {language === 'ar' ? 'إضافة مناقصة' : 'Add Tender'}
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'رقم المناقصة' : 'Tender ID'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'العنوان' : 'Title'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'القيمة' : 'Value'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'الموعد النهائي' : 'Deadline'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'العروض' : 'Bids'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'الحالة' : 'Status'}
+                    </th>
+                    <th
+                      className={`${language === 'ar' ? 'text-right' : 'text-left'} px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider`}
+                    >
+                      {language === 'ar' ? 'الإجراءات' : 'Actions'}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredTenders.map((tender) => (
                   <tr key={tender.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {tender.id}
+                      {tender.tenderNumber}
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{tender.title}</div>
-                        <div className="text-sm text-gray-500">{tender.description}</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {language === 'ar' ? tender.titleAr : tender.title}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {language === 'ar' 
+                            ? tender.descriptionAr?.substring(0, 100) 
+                            : tender.description?.substring(0, 100)}
+                          {(language === 'ar' ? tender.descriptionAr : tender.description)?.length > 100 && '...'}
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tender.value} {tender.currency}
+                      {tender.estimatedValue?.toLocaleString()} {tender.currency}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tender.deadline}
+                      {tender.submissionDeadline 
+                        ? new Date(tender.submissionDeadline).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US')
+                        : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {tender.bidsCount} {language === 'ar' ? 'عرض' : 'bids'}
+                        {tender._count?.bids || 0} {language === 'ar' ? 'عرض' : 'bids'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -290,18 +357,43 @@ export default function TendersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center gap-2">
                         <button
+                          onClick={() => handleViewTender(tender.id)}
                           className="text-blue-600 hover:text-blue-900"
                           aria-label={language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
+                          title={language === 'ar' ? 'عرض التفاصيل' : 'View Details'}
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {tender.status === 'COMPLETED' && (
+                          <button
+                            onClick={() => {
+                              localStorage.setItem('createAwardLetterFrom', JSON.stringify({
+                                tenderNumber: tender.tenderNumber,
+                                tenderTitle: language === 'ar' ? tender.titleAr : tender.title,
+                                estimatedValue: tender.estimatedValue
+                              }));
+                              router.push('/admin/award-letters');
+                            }}
+                            className="text-amber-600 hover:text-amber-900"
+                            aria-label={language === 'ar' ? 'إنشاء أمر إسناد' : 'Create Award Letter'}
+                            title={language === 'ar' ? 'إنشاء أمر إسناد' : 'Create Award Letter'}
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
+                          onClick={() => alert(language === 'ar' ? 'قريباً' : 'Coming soon')}
                           className="text-green-600 hover:text-green-900"
                           aria-label={language === 'ar' ? 'تحرير' : 'Edit'}
                         >
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => {
+                            if (confirm(language === 'ar' ? 'هل تريد حذف هذه المناقصة؟' : 'Delete this tender?')) {
+                              alert(language === 'ar' ? 'قريباً' : 'Coming soon');
+                            }
+                          }}
                           className="text-red-600 hover:text-red-900"
                           aria-label={language === 'ar' ? 'حذف' : 'Delete'}
                         >
@@ -314,6 +406,7 @@ export default function TendersPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
     </div>

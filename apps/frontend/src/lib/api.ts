@@ -28,9 +28,14 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Redirect to login or refresh token
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Log the error but don't redirect automatically
+      console.warn('Authentication error - 401:', error.response?.data);
+      // Optionally remove token
+      // localStorage.removeItem('token');
+      
+      // Only redirect to login if explicitly on an admin page that requires auth
+      // For now, we'll let individual pages handle this
+      // window.location.href = '/login';
     }
     return Promise.reject(error);
   }

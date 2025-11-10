@@ -38,11 +38,52 @@ export default function AdminDashboard() {
   const { language } = useLanguage();
   const [selectedPeriod, setSelectedPeriod] = useState('30days');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [financialData, setFinancialData] = useState({
+    revenue: 0,
+    expenses: 0,
+    profit: 0,
+    vehicles: 0,
+    vendors: 0,
+  });
+
+  // Load financial data from localStorage
+  useEffect(() => {
+    const vehicles = JSON.parse(localStorage.getItem('vehicles') || '[]');
+    const vendors = JSON.parse(localStorage.getItem('vendors') || '[]');
+    const journalEntries = JSON.parse(localStorage.getItem('journalEntries') || '[]');
+    
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+    
+    // Calculate revenue from vehicles
+    vehicles.forEach((vehicle: any) => {
+      if (vehicle.earnings) {
+        totalRevenue += vehicle.earnings;
+      }
+    });
+    
+    // Calculate expenses from journal entries
+    journalEntries.forEach((entry: any) => {
+      entry.lines?.forEach((line: any) => {
+        if (line.type === 'debit' && line.accountCode?.startsWith('5')) {
+          totalExpenses += line.amount || 0;
+        }
+      });
+    });
+    
+    setFinancialData({
+      revenue: totalRevenue,
+      expenses: totalExpenses,
+      profit: totalRevenue - totalExpenses,
+      vehicles: vehicles.length,
+      vendors: vendors.length,
+    });
+  }, []);
 
   // Enhanced mock data with comprehensive metrics
   const stats = {
     revenue: {
-      total: 2750000,
+      total: financialData.revenue,
       growth: 15.2,
       target: 3000000,
       monthly: [
@@ -67,110 +108,16 @@ export default function AdminDashboard() {
       new: 45,
     },
     vehicles: {
-      total: 28,
-      active: 24,
-      maintenance: 3,
-      available: 18,
+      total: financialData.vehicles,
+      active: financialData.vehicles,
+      maintenance: 0,
+      available: financialData.vehicles,
     },
   };
 
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'order',
-      action:
-        language === 'ar' ? 'طلب جديد من شركة النصر للتجارة' : 'New order from Al-Nasr Trading',
-      time: language === 'ar' ? 'منذ 5 دقائق' : '5 minutes ago',
-      status: 'success',
-    },
-    {
-      id: 2,
-      type: 'payment',
-      action: language === 'ar' ? 'تم دفع فاتورة بقيمة 125,000 ج.م' : 'Invoice paid EGP 125,000',
-      time: language === 'ar' ? 'منذ 12 دقيقة' : '12 minutes ago',
-      status: 'success',
-    },
-    {
-      id: 3,
-      type: 'alert',
-      action:
-        language === 'ar' ? 'صيانة مركبة VEH-012 مطلوبة' : 'Vehicle VEH-012 maintenance required',
-      time: language === 'ar' ? 'منذ 25 دقيقة' : '25 minutes ago',
-      status: 'warning',
-    },
-    {
-      id: 4,
-      type: 'delivery',
-      action: language === 'ar' ? 'تم توصيل شحنة SHP-2024-089' : 'Shipment SHP-2024-089 delivered',
-      time: language === 'ar' ? 'منذ 1 ساعة' : '1 hour ago',
-      status: 'success',
-    },
-    {
-      id: 5,
-      type: 'customer',
-      action:
-        language === 'ar'
-          ? 'عميل جديد: المجموعة المتحدة للاستيراد'
-          : 'New customer: United Import Group',
-      time: language === 'ar' ? 'منذ 2 ساعة' : '2 hours ago',
-      status: 'info',
-    },
-  ];
-
-  const topPerformers = [
-    {
-      id: 'VEH-001',
-      driver: language === 'ar' ? 'أحمد محمد' : 'Ahmed Mohamed',
-      trips: 45,
-      revenue: 285000,
-      rating: 4.8,
-      efficiency: 96,
-    },
-    {
-      id: 'VEH-003',
-      driver: language === 'ar' ? 'خالد أحمد' : 'Khaled Ahmed',
-      trips: 42,
-      revenue: 268000,
-      rating: 4.7,
-      efficiency: 94,
-    },
-    {
-      id: 'VEH-005',
-      driver: language === 'ar' ? 'سارة حسن' : 'Sara Hassan',
-      trips: 38,
-      revenue: 245000,
-      rating: 4.9,
-      efficiency: 97,
-    },
-  ];
-
-  const pendingTasks = [
-    {
-      id: 1,
-      task:
-        language === 'ar' ? 'مراجعة عروض المناقصة TND-2024-015' : 'Review tender bids TND-2024-015',
-      priority: 'high',
-      due: language === 'ar' ? 'اليوم' : 'Today',
-    },
-    {
-      id: 2,
-      task: language === 'ar' ? 'الموافقة على طلبات الشراء (3)' : 'Approve purchase orders (3)',
-      priority: 'medium',
-      due: language === 'ar' ? 'غداً' : 'Tomorrow',
-    },
-    {
-      id: 3,
-      task: language === 'ar' ? 'تحديث بيانات المستودع الرئيسي' : 'Update main warehouse data',
-      priority: 'low',
-      due: language === 'ar' ? '3 أيام' : '3 days',
-    },
-    {
-      id: 4,
-      task: language === 'ar' ? 'إعداد تقرير الربع السنوي' : 'Prepare quarterly report',
-      priority: 'high',
-      due: language === 'ar' ? '2 أيام' : '2 days',
-    },
-  ];
+  const recentActivities: any[] = [];
+  const topPerformers: any[] = [];
+  const pendingTasks: any[] = [];
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-EG', {
@@ -267,7 +214,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Key Performance Indicators - Ninja Style */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {/* Revenue Card - Enhanced */}
           <div className="group relative bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white overflow-hidden hover:shadow-2xl hover:shadow-green-200 transition-all duration-300 cursor-pointer">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
@@ -363,6 +310,32 @@ export default function AdminDashboard() {
                 <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full font-medium">
                   {stats.vehicles.available} {language === 'ar' ? 'متاحة' : 'available'}
                 </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Net Profit Card - NEW */}
+          <div className="group relative bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-6 text-white overflow-hidden hover:shadow-2xl hover:shadow-indigo-200 transition-all duration-300 cursor-pointer">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <TrendingUp className="w-6 h-6" />
+                </div>
+                <div className="flex items-center gap-1 px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full">
+                  <ArrowUpRight className="w-4 h-4" />
+                  <span className="text-sm font-bold">
+                    {financialData.revenue > 0 ? ((financialData.profit / financialData.revenue) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+              </div>
+              <h3 className="text-3xl font-bold mb-1">{formatCurrency(financialData.profit)}</h3>
+              <p className="text-indigo-100 text-sm font-medium mb-3">
+                {language === 'ar' ? 'صافي الربح' : 'Net Profit'}
+              </p>
+              <div className="flex items-center justify-between text-xs">
+                <span className="opacity-80">{language === 'ar' ? 'المصروفات' : 'Expenses'}</span>
+                <span className="font-semibold">{formatCurrency(financialData.expenses)}</span>
               </div>
             </div>
           </div>

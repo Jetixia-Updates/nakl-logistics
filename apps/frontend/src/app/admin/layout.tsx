@@ -53,14 +53,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       label: language === 'ar' ? 'المناقصات' : 'Tenders',
     },
     {
-      href: '/admin/work-orders',
+      href: '/admin/award-letters',
       icon: Package,
-      label: language === 'ar' ? 'أوامر العمل' : 'Work Orders',
+      label: language === 'ar' ? 'أوامر الإسناد' : 'Award Letters',
+    },
+    {
+      href: '/admin/assignments',
+      icon: CreditCard,
+      label: language === 'ar' ? 'أوامر التكليف' : 'Assignments',
     },
     {
       href: '/admin/vehicles',
       icon: Truck,
-      label: language === 'ar' ? 'الأسطول' : 'Vehicles',
+      label: language === 'ar' ? 'الأسطول' : 'Fleet',
+    },
+    {
+      href: '/admin/work-orders',
+      icon: FileText,
+      label: language === 'ar' ? 'أوامر التشغيل' : 'Work Orders',
     },
     {
       href: '/admin/customers',

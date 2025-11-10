@@ -40,6 +40,8 @@ model User {
   createdJournalEntries JournalEntry[] @relation("CreatedBy")
   createdInvoices       Invoice[]      @relation("CreatedBy")
   createdPayments       Payment[]      @relation("CreatedBy")
+  createdTenders        Tender[]       @relation("TenderCreatedBy")
+  evaluatedTenders      TenderEvaluation[] @relation("TenderEvaluatedBy")
   
   @@index([email])
   @@index([roleId])
@@ -113,8 +115,8 @@ model Account {
   description     String?
   
   // Balance tracking
-  debitBalance    Decimal     @default(0) @db.Decimal(15, 2)
-  creditBalance   Decimal     @default(0) @db.Decimal(15, 2)
+  debitBalance    Decimal     @default(0)
+  creditBalance   Decimal     @default(0)
   
   // Relations
   journalEntryLines JournalEntryLine[]
@@ -174,8 +176,8 @@ model JournalEntryLine {
   accountId       String
   account         Account       @relation(fields: [accountId], references: [id])
   
-  debit           Decimal       @default(0) @db.Decimal(15, 2)
-  credit          Decimal       @default(0) @db.Decimal(15, 2)
+  debit           Decimal       @default(0)
+  credit          Decimal       @default(0)
   description     String?
   
   createdAt       DateTime      @default(now())
@@ -215,12 +217,13 @@ model Customer {
   commercialRegNo String?
   
   // Financial
-  creditLimit     Decimal   @default(0) @db.Decimal(15, 2)
-  balance         Decimal   @default(0) @db.Decimal(15, 2)
+  creditLimit     Decimal   @default(0)
+  balance         Decimal   @default(0)
   
   // Relations
   invoices        Invoice[]
   payments        Payment[]
+  workOrders      WorkOrder[]
   
   isActive        Boolean   @default(true)
   notes           String?
@@ -261,16 +264,19 @@ model Vendor {
   licenseExpiry   DateTime?
   
   // Financial
-  balance         Decimal   @default(0) @db.Decimal(15, 2)
+  balance         Decimal   @default(0)
   
   // Relations
   vehicles        Vehicle[]
   bills           Bill[]
   payments        Payment[]
+  documentPurchases DocumentPurchase[]
+  bids            Bid[]
+  workOrders      WorkOrder[]
   
   isActive        Boolean   @default(true)
   notes           String?
-  rating          Decimal?  @db.Decimal(3, 2)  // 0.00 to 5.00
+  rating          Decimal?   // 0.00 to 5.00
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -307,7 +313,7 @@ model Vehicle {
   brand           String?
   model           String?
   year            Int?
-  capacity        Decimal?      @db.Decimal(10, 2)  // in tons
+  capacity        Decimal?       // in tons
   status          VehicleStatus @default(AVAILABLE)
   
   // Owner Information
@@ -368,12 +374,12 @@ model Invoice {
   customer        Customer      @relation(fields: [customerId], references: [id])
   
   // Amounts
-  subtotal        Decimal       @db.Decimal(15, 2)
-  taxAmount       Decimal       @default(0) @db.Decimal(15, 2)
-  discountAmount  Decimal       @default(0) @db.Decimal(15, 2)
-  total           Decimal       @db.Decimal(15, 2)
-  paidAmount      Decimal       @default(0) @db.Decimal(15, 2)
-  remainingAmount Decimal       @db.Decimal(15, 2)
+  subtotal        Decimal      
+  taxAmount       Decimal       @default(0)
+  discountAmount  Decimal       @default(0)
+  total           Decimal      
+  paidAmount      Decimal       @default(0)
+  remainingAmount Decimal      
   
   // Details
   items           InvoiceItem[]
@@ -407,11 +413,11 @@ model InvoiceItem {
   
   description     String
   descriptionAr   String?
-  quantity        Decimal  @db.Decimal(10, 2)
-  unitPrice       Decimal  @db.Decimal(15, 2)
-  taxRate         Decimal  @default(0) @db.Decimal(5, 2)  // Tax percentage
-  discountRate    Decimal  @default(0) @db.Decimal(5, 2)
-  total           Decimal  @db.Decimal(15, 2)
+  quantity        Decimal 
+  unitPrice       Decimal 
+  taxRate         Decimal  @default(0)  // Tax percentage
+  discountRate    Decimal  @default(0)
+  total           Decimal 
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -444,11 +450,11 @@ model Bill {
   vendor          Vendor     @relation(fields: [vendorId], references: [id])
   
   // Amounts
-  subtotal        Decimal    @db.Decimal(15, 2)
-  taxAmount       Decimal    @default(0) @db.Decimal(15, 2)
-  total           Decimal    @db.Decimal(15, 2)
-  paidAmount      Decimal    @default(0) @db.Decimal(15, 2)
-  remainingAmount Decimal    @db.Decimal(15, 2)
+  subtotal        Decimal   
+  taxAmount       Decimal    @default(0)
+  total           Decimal   
+  paidAmount      Decimal    @default(0)
+  remainingAmount Decimal   
   
   // Details
   items           BillItem[]
@@ -476,10 +482,10 @@ model BillItem {
   
   description     String
   descriptionAr   String?
-  quantity        Decimal  @db.Decimal(10, 2)
-  unitPrice       Decimal  @db.Decimal(15, 2)
-  taxRate         Decimal  @default(0) @db.Decimal(5, 2)
-  total           Decimal  @db.Decimal(15, 2)
+  quantity        Decimal 
+  unitPrice       Decimal 
+  taxRate         Decimal  @default(0)
+  total           Decimal 
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -511,7 +517,7 @@ model Payment {
   type            PaymentType
   method          PaymentMethod
   date            DateTime
-  amount          Decimal       @db.Decimal(15, 2)
+  amount          Decimal      
   
   // Customer Payment
   customerId      String?
@@ -563,4 +569,354 @@ model CostCenter {
   updatedAt   DateTime @updatedAt
   
   @@map("cost_centers")
+}
+
+// ============================================
+// TENDERS (مناقصات)
+// ============================================
+
+enum TenderStatus {
+  DRAFT                 // مسودة
+  PUBLISHED             // منشورة
+  DOCUMENT_PURCHASE     // مرحلة شراء كراسة الشروط
+  SUBMISSION_OPEN       // مفتوحة للتقديم
+  SUBMISSION_CLOSED     // مغلقة للتقديم
+  UNDER_EVALUATION      // تحت التقييم
+  AWARDED               // تم الإرساء
+  WORK_IN_PROGRESS      // جاري التنفيذ
+  COMPLETED             // مكتملة
+  CANCELLED             // ملغاة
+}
+
+enum TenderType {
+  PUBLIC            // مناقصة عامة
+  LIMITED           // مناقصة محدودة
+  DIRECT            // أمر مباشر
+  FRAMEWORK         // اتفاقية إطارية
+}
+
+enum BidStatus {
+  DRAFT             // مسودة
+  SUBMITTED         // مقدم
+  UNDER_REVIEW      // تحت المراجعة
+  QUALIFIED         // مؤهل
+  DISQUALIFIED      // غير مؤهل
+  WINNER            // فائز
+  REJECTED          // مرفوض
+}
+
+enum DocumentPurchaseStatus {
+  PENDING           // في الانتظار
+  PAID              // مدفوعة
+  DOWNLOADED        // تم التحميل
+  EXPIRED           // منتهية
+}
+
+model Tender {
+  id                    String        @id @default(uuid())
+  tenderNumber          String        @unique
+  referenceNumber       String?       // رقم مرجعي خارجي
+  type                  TenderType
+  status                TenderStatus  @default(DRAFT)
+  
+  // Basic Information
+  title                 String
+  titleAr               String
+  description           String        @db.Text
+  descriptionAr         String        @db.Text
+  category              String        // نوع النشاط (نقل، تخزين، تخليص جمركي، إلخ)
+  
+  // Financial Details
+  estimatedValue        Decimal      
+  currency              String        @default("EGP")
+  documentPrice         Decimal       @default(0)  // سعر كراسة الشروط
+  bidBond               Decimal       @default(0)  // التأمين الابتدائي
+  performanceBond       Decimal       @default(0)  // التأمين النهائي
+  
+  // Important Dates
+  publishDate           DateTime?                                       // تاريخ النشر
+  documentSaleStart     DateTime?                                       // بداية بيع كراسة الشروط
+  documentSaleEnd       DateTime?                                       // نهاية بيع كراسة الشروط
+  submissionDeadline    DateTime?                                       // الموعد النهائي للتقديم
+  openingDate           DateTime?                                       // تاريخ فتح المظاريف
+  awardDate             DateTime?                                       // تاريخ الإرساء
+  workStartDate         DateTime?                                       // تاريخ بداية العمل
+  workEndDate           DateTime?                                       // تاريخ انتهاء العمل
+  
+  // Terms and Conditions
+  requirements          Json?                                          // متطلبات التأهيل
+  terms                 String?       @db.Text                          // الشروط والأحكام
+  termsAr               String?       @db.Text
+  scope                 String?       @db.Text                          // نطاق العمل
+  scopeAr               String?       @db.Text
+  
+  // Contact Information
+  contactPerson         String?
+  contactPhone          String?
+  contactEmail          String?
+  
+  // Relations
+  documents             TenderDocument[]
+  documentPurchases     DocumentPurchase[]
+  bids                  Bid[]
+  evaluations           TenderEvaluation[]
+  workOrders            WorkOrder[]
+  items                 TenderItem[]
+  milestones            TenderMilestone[]
+  
+  // Audit
+  createdById           String
+  createdBy             User          @relation("TenderCreatedBy", fields: [createdById], references: [id])
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([tenderNumber])
+  @@index([status])
+  @@index([type])
+  @@index([publishDate])
+  @@map("tenders")
+}
+
+// بنود المناقصة
+model TenderItem {
+  id              String   @id @default(uuid())
+  tenderId        String
+  tender          Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  
+  itemNumber      String   // رقم البند
+  description     String   @db.Text
+  descriptionAr   String   @db.Text
+  quantity        Decimal 
+  unit            String   // الوحدة (كم، طن، حاوية، إلخ)
+  unitAr          String
+  estimatedPrice  Decimal 
+  specifications  Json?    // المواصفات التفصيلية
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenderId])
+  @@map("tender_items")
+}
+
+// مراحل تنفيذ المناقصة
+model TenderMilestone {
+  id              String    @id @default(uuid())
+  tenderId        String
+  tender          Tender    @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  
+  milestoneNumber Int
+  title           String
+  titleAr         String
+  description     String?   @db.Text
+  descriptionAr   String?   @db.Text
+  percentage      Decimal    // نسبة الإنجاز
+  amount          Decimal  
+  dueDate         DateTime?
+  completedDate   DateTime?
+  status          String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, DELAYED
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tenderId])
+  @@map("tender_milestones")
+}
+
+// مستندات المناقصة
+model TenderDocument {
+  id              String   @id @default(uuid())
+  tenderId        String
+  tender          Tender   @relation(fields: [tenderId], references: [id], onDelete: Cascade)
+  
+  title           String
+  titleAr         String
+  type            String   // SPECIFICATIONS, TERMS, TECHNICAL, FINANCIAL, OTHER
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  version         String   @default("1.0")
+  isRequired      Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenderId])
+  @@map("tender_documents")
+}
+
+// شراء كراسة الشروط
+model DocumentPurchase {
+  id              String                  @id @default(uuid())
+  purchaseNumber  String                  @unique
+  tenderId        String
+  tender          Tender                  @relation(fields: [tenderId], references: [id])
+  vendorId        String
+  vendor          Vendor                  @relation(fields: [vendorId], references: [id])
+  
+  status          DocumentPurchaseStatus  @default(PENDING)
+  amount          Decimal                
+  paymentMethod   String?
+  paymentRef      String?
+  purchaseDate    DateTime                @default(now())
+  downloadDate    DateTime?
+  expiryDate      DateTime?
+  
+  notes           String?
+  
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  
+  @@index([purchaseNumber])
+  @@index([tenderId])
+  @@index([vendorId])
+  @@map("document_purchases")
+}
+
+// العروض المقدمة
+model Bid {
+  id              String    @id @default(uuid())
+  bidNumber       String    @unique
+  tenderId        String
+  tender          Tender    @relation(fields: [tenderId], references: [id])
+  vendorId        String
+  vendor          Vendor    @relation(fields: [vendorId], references: [id])
+  
+  status          BidStatus @default(DRAFT)
+  
+  // Financial Offer
+  totalAmount     Decimal  
+  currency        String    @default("EGP")
+  validityPeriod  Int?      // مدة سريان العرض بالأيام
+  
+  // Technical Details
+  technicalScore  Decimal?   // الدرجة الفنية
+  financialScore  Decimal?   // الدرجة المالية
+  totalScore      Decimal?   // الدرجة الإجمالية
+  
+  // Submission Details
+  submittedDate   DateTime?
+  openedDate      DateTime?
+  
+  // Documents
+  documents       BidDocument[]
+  items           BidItem[]
+  
+  // Notes and Comments
+  notes           String?   @db.Text
+  evaluationNotes String?   @db.Text
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([bidNumber])
+  @@index([tenderId])
+  @@index([vendorId])
+  @@index([status])
+  @@map("bids")
+}
+
+// بنود العرض
+model BidItem {
+  id              String   @id @default(uuid())
+  bidId           String
+  bid             Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  
+  itemNumber      String
+  description     String   @db.Text
+  quantity        Decimal 
+  unitPrice       Decimal 
+  totalPrice      Decimal 
+  notes           String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([bidId])
+  @@map("bid_items")
+}
+
+// مستندات العرض
+model BidDocument {
+  id              String   @id @default(uuid())
+  bidId           String
+  bid             Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  
+  title           String
+  type            String   // TECHNICAL, FINANCIAL, LEGAL, CERTIFICATES, OTHER
+  fileName        String
+  fileUrl         String
+  fileSize        Int?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([bidId])
+  @@map("bid_documents")
+}
+
+// تقييم المناقصات
+model TenderEvaluation {
+  id              String   @id @default(uuid())
+  tenderId        String
+  tender          Tender   @relation(fields: [tenderId], references: [id])
+  
+  evaluationType  String   // TECHNICAL, FINANCIAL, COMBINED
+  criteria        Json     // معايير التقييم
+  weights         Json     // الأوزان النسبية
+  
+  evaluatedById   String
+  evaluatedBy     User     @relation("TenderEvaluatedBy", fields: [evaluatedById], references: [id])
+  evaluationDate  DateTime @default(now())
+  
+  report          String?  @db.Text
+  reportAr        String?  @db.Text
+  recommendation  String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([tenderId])
+  @@map("tender_evaluations")
+}
+
+// أوامر العمل (مرتبطة بالمناقصات)
+model WorkOrder {
+  id              String   @id @default(uuid())
+  orderNumber     String   @unique
+  
+  tenderId        String?
+  tender          Tender?  @relation(fields: [tenderId], references: [id])
+  
+  customerId      String
+  customer        Customer @relation(fields: [customerId], references: [id])
+  
+  vendorId        String?
+  vendor          Vendor?  @relation(fields: [vendorId], references: [id])
+  
+  status          String   @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED
+  
+  // Details
+  description     String   @db.Text
+  descriptionAr   String   @db.Text
+  startDate       DateTime?
+  endDate         DateTime?
+  actualStartDate DateTime?
+  actualEndDate   DateTime?
+  
+  // Financial
+  totalAmount     Decimal 
+  paidAmount      Decimal  @default(0)
+  
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([orderNumber])
+  @@index([tenderId])
+  @@index([customerId])
+  @@index([vendorId])
+  @@map("work_orders")
 }
