@@ -1,10 +1,10 @@
 [build]
   base = "apps/frontend"
-  publish = "apps/frontend/.next"
+  publish = ".next"
   command = "npm install --legacy-peer-deps && npm run build"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
 
 # Redirect API calls to backend functions
