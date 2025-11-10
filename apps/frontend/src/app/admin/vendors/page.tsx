@@ -231,7 +231,7 @@ export default function VendorsPage() {
                 {/* Services */}
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-2">
-                    {vendor.services.map((service, idx) => (
+                    {vendor.services.map((service: string, idx: number) => (
                       <span
                         key={idx}
                         className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs"

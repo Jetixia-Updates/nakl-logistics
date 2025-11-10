@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../../config/postgres';
+import prisma from '../../config/postgres';
 import { logger } from '../../utils/logger';
 
 export class TenderController {

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../../config/postgres';
+import prisma from '../../config/postgres';
 import { logger } from '../../utils/logger';
 
 export class TenderReportController {
@@ -50,19 +50,19 @@ export class TenderReportController {
         totalDocumentPurchases: tender.documentPurchases.length,
         totalItems: tender.items.length,
         totalMilestones: tender.milestones.length,
-        completedMilestones: tender.milestones.filter((m) => m.status === 'COMPLETED').length,
+        completedMilestones: tender.milestones.filter((m: any) => m.status === 'COMPLETED').length,
         averageBidAmount:
           tender.bids.length > 0
-            ? tender.bids.reduce((sum, bid) => sum + Number(bid.totalAmount), 0) /
+            ? tender.bids.reduce((sum: number, bid: any) => sum + Number(bid.totalAmount), 0) /
               tender.bids.length
             : 0,
         lowestBid:
           tender.bids.length > 0
-            ? Math.min(...tender.bids.map((bid) => Number(bid.totalAmount)))
+            ? Math.min(...tender.bids.map((bid: any) => Number(bid.totalAmount)))
             : 0,
         highestBid:
           tender.bids.length > 0
-            ? Math.max(...tender.bids.map((bid) => Number(bid.totalAmount)))
+            ? Math.max(...tender.bids.map((bid: any) => Number(bid.totalAmount)))
             : 0,
         documentRevenue:
           Number(tender.documentPrice) * tender.documentPurchases.length,
@@ -94,7 +94,7 @@ export class TenderReportController {
       };
 
       // Vendor analysis
-      const vendorAnalysis = tender.bids.map((bid) => ({
+      const vendorAnalysis = tender.bids.map((bid: any) => ({
         vendor: bid.vendor,
         bidAmount: bid.totalAmount,
         status: bid.status,
@@ -157,32 +157,32 @@ export class TenderReportController {
       const summary = {
         totalTenders: tenders.length,
         totalEstimatedValue: tenders.reduce(
-          (sum, t) => sum + Number(t.estimatedValue),
+          (sum: number, t: any) => sum + Number(t.estimatedValue),
           0
         ),
         averageEstimatedValue:
           tenders.length > 0
-            ? tenders.reduce((sum, t) => sum + Number(t.estimatedValue), 0) /
+            ? tenders.reduce((sum: number, t: any) => sum + Number(t.estimatedValue), 0) /
               tenders.length
             : 0,
-        totalBids: tenders.reduce((sum, t) => sum + t._count.bids, 0),
+        totalBids: tenders.reduce((sum: number, t: any) => sum + t._count.bids, 0),
         averageBidsPerTender:
           tenders.length > 0
-            ? tenders.reduce((sum, t) => sum + t._count.bids, 0) / tenders.length
+            ? tenders.reduce((sum: number, t: any) => sum + t._count.bids, 0) / tenders.length
             : 0,
         totalDocumentPurchases: tenders.reduce(
-          (sum, t) => sum + t._count.documentPurchases,
+          (sum: number, t: any) => sum + t._count.documentPurchases,
           0
         ),
         documentRevenue: tenders.reduce(
-          (sum, t) => sum + Number(t.documentPrice) * t._count.documentPurchases,
+          (sum: number, t: any) => sum + Number(t.documentPrice) * t._count.documentPurchases,
           0
         ),
-        statusBreakdown: tenders.reduce((acc: any, t) => {
+        statusBreakdown: tenders.reduce((acc: any, t: any) => {
           acc[t.status] = (acc[t.status] || 0) + 1;
           return acc;
         }, {}),
-        typeBreakdown: tenders.reduce((acc: any, t) => {
+        typeBreakdown: tenders.reduce((acc: any, t: any) => {
           acc[t.type] = (acc[t.type] || 0) + 1;
           return acc;
         }, {}),
@@ -226,7 +226,7 @@ export class TenderReportController {
         },
       });
 
-      const analysis = bids.map((bid) => {
+      const analysis = bids.map((bid: any) => {
         const deviation = Number(bid.totalAmount) - Number(bid.tender.estimatedValue);
         const deviationPercentage =
           (deviation / Number(bid.tender.estimatedValue)) * 100;
@@ -256,7 +256,7 @@ export class TenderReportController {
       });
 
       // Sort by total score descending
-      analysis.sort((a, b) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
+      analysis.sort((a: any, b: any) => Number(b.totalScore || 0) - Number(a.totalScore || 0));
 
       res.json({ data: analysis });
     } catch (error) {
@@ -292,7 +292,7 @@ export class TenderReportController {
 
       const vendorStats: any = {};
 
-      bids.forEach((bid) => {
+      bids.forEach((bid: any) => {
         const vendorId = bid.vendorId;
         if (!vendorStats[vendorId]) {
           vendorStats[vendorId] = {
@@ -372,7 +372,7 @@ export class TenderReportController {
       // Group by tender
       const tenderProgress: any = {};
 
-      milestones.forEach((milestone) => {
+      milestones.forEach((milestone: any) => {
         const tenderId = milestone.tenderId;
         if (!tenderProgress[tenderId]) {
           tenderProgress[tenderId] = {
@@ -450,22 +450,22 @@ export class TenderReportController {
 
       const financial = {
         totalEstimatedValue: tenders.reduce(
-          (sum, t) => sum + Number(t.estimatedValue),
+          (sum: number, t: any) => sum + Number(t.estimatedValue),
           0
         ),
-        totalAwardedValue: tenders.reduce((sum, t) => {
+        totalAwardedValue: tenders.reduce((sum: number, t: any) => {
           const winningBid = t.bids[0];
           return sum + (winningBid ? Number(winningBid.totalAmount) : 0);
         }, 0),
         savings: 0,
         savingsPercentage: 0,
         documentRevenue: tenders.reduce(
-          (sum, t) =>
+          (sum: number, t: any) =>
             sum + Number(t.documentPrice) * t.documentPurchases.length,
           0
         ),
         averageSavingsPerTender: 0,
-        tendersAwarded: tenders.filter((t) => t.status === 'AWARDED' || t.status === 'WORK_IN_PROGRESS' || t.status === 'COMPLETED').length,
+        tendersAwarded: tenders.filter((t: any) => t.status === 'AWARDED' || t.status === 'WORK_IN_PROGRESS' || t.status === 'COMPLETED').length,
       };
 
       financial.savings = financial.totalEstimatedValue - financial.totalAwardedValue;
